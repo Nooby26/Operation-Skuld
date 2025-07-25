@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steins;Gate Divergence Meter - Visual Novel Counter</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Orbitron:wght@700&display=swap');
+
+        :root {
+            --primary-color: #ff6000;
+            --secondary-color: #ff9d00;
+            --dark-bg: #0a0500;
+            --panel-bg: rgba(10, 5, 0, 0.9);
+            --border-color: #ff8033;
+            --font-main: 'VT323', 'Lucida Console', monospace;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            height: 100%;
+            background: #000;
+            font-family: var(--font-main);
+            color: var(--primary-color);
+            overflow: hidden;
+        }
+
+        .master-container {
+            display: flex;
+            height: 100vh;
+            background: radial-gradient(ellipse at 50% 30%, #2a1500 0%, #000000 80%);
+            transition: all 0.3s ease;
+        }
+
+        .left-panel, .right-panel {
+            padding: 25px;
+            box-sizing: border-box;
+            height: 100%;
+        }
+
+        .left-panel {
+            flex-basis: 65%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: flex-basis 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .master-container.sidebar-collapsed .left-panel {
+            flex-basis: 100%;
+        }
+
+        .right-panel {
+            flex-basis: 35%;
+            background: var(--panel-bg);
+            border-left: 2px solid var(--border-color);
+            box-shadow: -10px 0 25px rgba(255, 102, 0, 0.2);
+            transition: all 0.3s ease;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .master-container.sidebar-collapsed .right-panel {
+            flex-basis: 0%;
+            min-width: 0;
+            padding: 0;
+            border-left: none;
+            box-shadow: none;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); }
+
+        .divergence-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 40px;
+            min-height: 150px;
+        }
+        
+        .divergence-display img {
+            height: 130px;
+            margin: 0 1px;
+            transition: height 0.3s ease;
+        }
+        
+        .divergence-display .percentage-symbol {
+            margin-left: 8px;
+        }
+
+        .fallback-digit {
+            display: inline-block;
+            width: 60px;
+            height: 130px;
+            background: linear-gradient(180deg, #2a1500 0%, #1a0d00 50%, #0d0700 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            margin: 0 2px;
+            line-height: 130px;
+            text-align: center;
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-shadow: 0 0 10px var(--primary-color);
+        }
+
+        .controls { text-align: center; }
+        .control-row { display: flex; gap: 15px; justify-content: center; }
+        
+        button {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 12px 25px;
+            cursor: pointer;
+            font-family: var(--font-main);
+            font-size: 20px;
+            text-shadow: 0 0 8px var(--primary-color);
+            transition: all 0.3s;
+            position: relative;
+            border-radius: 3px;
+        }
+        
+        button:hover {
+            background: var(--primary-color);
+            color: #000;
+            text-shadow: none;
+            box-shadow: 0 0 15px var(--primary-color);
+        }
+
+        .info-panel, .settings-panel {
+            padding: 10px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .info-panel h3 {
+            font-size: 28px;
+            color: var(--secondary-color);
+            text-shadow: 0 0 5px var(--secondary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .settings-panel h3 {
+            font-size: 28px;
+            color: #ff8033;
+            text-shadow: 0 0 5px #ff8033;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .worldline-info {
+            margin: 15px 0; font-size: 20px;
+            letter-spacing: 1px;
+        }
+        
+        .progress-bar {
+            width: 90%; height: 25px; background: #000;
+            border: 2px solid var(--primary-color);
+            margin: 15px auto; overflow: hidden;
+            box-shadow: inset 0 0 8px #000;
+            border-radius: 3px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 0 15px var(--primary-color);
+            transition: width 0.5s ease;
+        }
+        
+        select, input[type="number"] {
+            background: var(--dark-bg);
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 8px 12px;
+            font-family: var(--font-main);
+            font-size: 18px;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 3px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 5px; background: var(--primary-color);
+            outline: none; border-radius: 3px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 25px; height: 25px; background: var(--secondary-color);
+            cursor: pointer; border: 3px solid var(--dark-bg);
+            box-shadow: 0 0 10px var(--secondary-color);
+            border-radius: 50%;
+        }
+
+        input[type="checkbox"] {
+            width: 20px; height: 20px;
+            accent-color: var(--primary-color);
+            margin-right: 8px;
+        }
+
+        textarea {
+            background: var(--dark-bg);
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px;
+            font-family: var(--font-main);
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 3px;
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        textarea::placeholder {
+            color: #ff9d0070;
+            font-style: italic;
+        }
+
+        .settings-group {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ff6000;
+            border-radius: 8px;
+            background: rgba(10, 5, 0, 0.3);
+        }
+
+        .settings-group h4 {
+            color: #ff9d00;
+            font-size: 18px;
+            margin: 0 0 15px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ff8033;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 12px 0;
+            font-size: 16px;
+            text-align: left;
+        }
+
+        .setting-item label {
+            flex: 1;
+            margin-right: 10px;
+            display: block;
+        }
+
+        .setting-item input[type="range"] {
+            flex: 2;
+            margin: 0 10px;
+        }
+
+        .setting-item input[type="number"], .setting-item select {
+            flex: 1;
+            margin-left: 10px;
+        }
+
+        .setting-item .value-display {
+            min-width: 70px;
+            text-align: right;
+            color: #ff9d00;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .preset-buttons button {
+            padding: 8px 15px;
+            font-size: 14px;
+            border-radius: 5px;
+            min-width: 80px;
+        }
+
+        .save-settings-button {
+            background: var(--secondary-color) !important;
+            color: #000 !important;
+            font-weight: bold;
+            font-size: 18px !important;
+            padding: 15px 30px !important;
+            margin: 20px 0;
+            box-shadow: 0 0 15px var(--secondary-color);
+            text-shadow: none !important;
+        }
+
+        .save-settings-button:hover {
+            background: var(--primary-color) !important;
+            box-shadow: 0 0 20px var(--primary-color);
+        }
+
+        .dialogue-editor {
+            width: 100%;
+            text-align: left;
+        }
+
+        .dialogue-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .dialogue-tab {
+            padding: 8px 12px;
+            font-size: 14px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--secondary-color);
+            cursor: pointer;
+            border-radius: 3px 3px 0 0;
+            transition: all 0.3s;
+        }
+
+        .dialogue-tab.active {
+            background: var(--secondary-color);
+            color: #000;
+        }
+
+        .dialogue-tab:hover:not(.active) {
+            background: rgba(255, 157, 0, 0.2);
+        }
+
+        .dialogue-content {
+            display: none;
+        }
+
+        .dialogue-content.active {
+            display: block;
+        }
+
+        .dialogue-help {
+            font-size: 12px;
+            color: #ff9d0080;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .settings-panel {
+            max-height: 0;
+            overflow: hidden;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-top: 0;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out, margin 0.5s ease-out;
+        }
+        .settings-panel.active {
+            max-height: 3000px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            margin-top: 20px;
+        }
+
+        #dialogueBox {
+            position: fixed;
+            bottom: 40px; left: 5%; width: 60%;
+            background: rgba(10, 5, 0, 0.95);
+            border: 2px solid var(--border-color);
+            padding: 20px; font-size: 24px;
+            z-index: 200;
+            opacity: 0;
+            transition: all 0.5s ease;
+            pointer-events: none;
+            box-shadow: 0 0 20px rgba(255, 102, 0, 0.3);
+            border-radius: 8px;
+        }
+        #dialogueBox.visible { opacity: 1; }
+        .dialogue-char { font-weight: bold; color: var(--secondary-color); }
+
+        #dialogueBox.position-bottom-left {
+            bottom: 40px; left: 5%; width: 60%;
+        }
+        #dialogueBox.position-bottom-center {
+            bottom: 40px; left: 50%; width: 60%;
+            transform: translateX(-50%);
+        }
+        #dialogueBox.position-bottom-right {
+            bottom: 40px; right: 5%; width: 60%;
+            left: auto;
+        }
+        #dialogueBox.position-center {
+            top: 50%; left: 50%; width: 60%;
+            transform: translate(-50%, -50%);
+            bottom: auto;
+        }
+        #dialogueBox.position-top-center {
+            top: 40px; left: 50%; width: 60%;
+            transform: translateX(-50%);
+            bottom: auto;
+        }
+
+        .help-text {
+            color: #ff9d00;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-line;
+        }
+
+        .tooltip {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            padding: 10px 15px;
+            border-radius: 5px;
+            color: var(--secondary-color);
+            font-size: 16px;
+            z-index: 300;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .tooltip.visible { opacity: 1; }
+
+        .settings-note {
+            background: rgba(255, 102, 0, 0.1);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-size: 14px;
+            color: var(--secondary-color);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="master-container" id="masterContainer">
+        <div class="left-panel">
+            <div class="divergence-display" id="divergenceDisplay"></div>
+            <div class="controls">
+                <div class="control-row">
+                    <button onclick="incrementStreak()">Productive Day (+1)</button>
+                    <button onclick="resetStreak()">Reset Worldline</button>
+                    <button onclick="toggleSettings()">Toggle Config (S)</button>
+                </div>
+            </div>
+            <div id="dialogueBox" class="position-bottom-left"></div>
+        </div>
+
+        <div class="right-panel">
+            <div class="info-panel">
+                <h3>Lab Status</h3>
+                <div class="worldline-info"><strong>Worldline:</strong> <span id="currentWorldline">Loading...</span></div>
+                <div class="worldline-info"><strong>Route:</strong> <span id="currentRoute">Calculating...</span></div>
+                <div class="worldline-info"><strong>Target:</strong> Steins Gate (1.048596)</div>
+                <div class="worldline-info"><strong>Progress:</strong></div>
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="worldline-info"><strong>Streak:</strong> <span id="streakDays">0</span> / <span id="totalDays">50</span> Days</div>
+            </div>
+            <div class="settings-panel" id="settingsPanel">
+                <h3>System Config</h3>
+                
+                <div class="settings-note">
+                    ⚠️ Changes only take effect after clicking "Save Settings"
+                </div>
+                
+                <div class="settings-group">
+                    <h4>Display Settings</h4>
+                    <div class="setting-item">
+                        <label>Meter Size:</label>
+                        <input type="range" id="meterSizeInput" min="80" max="400" value="130" oninput="updateValueDisplays()">
+                        <span class="value-display" id="meterSizeValue">130px</span>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h4>Audio Settings</h4>
+                    <div class="setting-item">
+                        <label>Enable Sound:</label>
+                        <input type="checkbox" id="soundEnabledInput" checked>
+                        <span>Play sound on streak change</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Sound Volume:</label>
+                        <input type="range" id="soundVolumeInput" min="0" max="100" value="70" oninput="updateValueDisplays()">
+                        <span class="value-display" id="soundVolumeValue">70%</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Sound-to-Flicker Delay (ms):</label>
+                        <input type="range" id="soundLeadInput" min="0" max="1500" value="500" oninput="updateValueDisplays()">
+                        <span class="value-display" id="soundLeadValue">500ms</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Match Flicker to Sound:</label>
+                        <input type="checkbox" id="matchFlickerInput" checked>
+                        <span>Auto-extend flicker duration</span>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h4>Flicker Configuration</h4>
+                    <div class="setting-item">
+                        <label>Enable Flicker:</label>
+                        <input type="checkbox" id="flickerEnabledInput" checked>
+                        <span>Authentic animation</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Flicker Speed (ms):</label>
+                        <input type="range" id="flickerSpeedInput" min="10" max="100" value="25" oninput="updateValueDisplays()">
+                        <span class="value-display" id="flickerSpeedValue">25ms</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Flicker Duration:</label>
+                        <input type="range" id="flickerDurationInput" min="10" max="120" value="30" oninput="updateValueDisplays()">
+                        <span class="value-display" id="flickerDurationValue">30 frames</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Desync Delay (ms):</label>
+                        <input type="range" id="flickerDesyncInput" min="0" max="500" value="200" oninput="updateValueDisplays()">
+                        <span class="value-display" id="flickerDesyncValue">200ms</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Flicker Smoothness:</label>
+                        <input type="range" id="flickerSmoothInput" min="1" max="5" value="3" oninput="updateValueDisplays()">
+                        <span class="value-display" id="flickerSmoothValue">3</span>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h4>Timeline & Dialogue Settings</h4>
+                    <div class="setting-item">
+                        <label>Starting Timeline:</label>
+                        <select id="timelineSelect"><!-- Will be populated --></select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Total Days to Steins Gate:</label>
+                        <input type="number" id="totalDaysInput" value="50" min="1">
+                    </div>
+                    <div class="setting-item">
+                        <label>Dialogue Set:</label>
+                        <select id="dialogueTimelineSelect">
+                            <option value="alpha">Alpha Timeline</option>
+                            <option value="beta">Beta Timeline</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h4>Interface Settings</h4>
+                    <div class="setting-item">
+                        <label>Dialogue Position:</label>
+                        <select id="dialoguePositionSelect">
+                            <option value="bottom-left">Bottom Left</option>
+                            <option value="bottom-center">Bottom Center</option>
+                            <option value="bottom-right">Bottom Right</option>
+                            <option value="center">Screen Center</option>
+                            <option value="top-center">Top Center</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Auto-hide Dialogue:</label>
+                        <input type="checkbox" id="autoHideDialogue" checked>
+                        <span>Hide after 5 seconds</span>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <h4>Custom Dialogue Editor</h4>
+                    <div class="dialogue-editor">
+                        <div class="dialogue-tabs">
+                            <button class="dialogue-tab active" onclick="switchDialogueTab('intro')">Intro</button>
+                            <button class="dialogue-tab" onclick="switchDialogueTab('early')">Early</button>
+                            <button class="dialogue-tab" onclick="switchDialogueTab('mid')">Mid</button>
+                            <button class="dialogue-tab" onclick="switchDialogueTab('late')">Late</button>
+                            <button class="dialogue-tab" onclick="switchDialogueTab('final')">Final</button>
+                        </div>
+                        
+                        <div class="dialogue-content active" id="dialogue-intro">
+                            <div class="dialogue-help">Format: "Character: 'Dialogue text'" (one per line)</div>
+                            <textarea id="customDialogueIntro" placeholder="Okabe: 'The wheels of fate are turning!'&#10;Kurisu: 'Don't get cocky. This is just the beginning.'&#10;Mayuri: 'Tuturu~! How exciting!'"></textarea>
+                        </div>
+                        
+                        <div class="dialogue-content" id="dialogue-early">
+                            <div class="dialogue-help">Early progress dialogue</div>
+                            <textarea id="customDialogueEarly" placeholder="Daru: 'Keep it up, Okarin.'&#10;Kurisu: 'Your methodology isn't terrible... for an amateur.'&#10;Okabe: 'Each productive day is a nail in the Organization's coffin!'"></textarea>
+                        </div>
+                        
+                        <div class="dialogue-content" id="dialogue-mid">
+                            <div class="dialogue-help">Mid progress dialogue</div>
+                            <textarea id="customDialogueMid" placeholder="Kurisu: 'The divergence numbers are shifting in our favor.'&#10;Okabe: 'Reading Steiner is resonating with my will!'&#10;Suzuha: 'We're halfway there, Uncle.'"></textarea>
+                        </div>
+                        
+                        <div class="dialogue-content" id="dialogue-late">
+                            <div class="dialogue-help">Late progress dialogue</div>
+                            <textarea id="customDialogueLate" placeholder="Okabe: 'So close... I can almost taste victory!'&#10;Suzuha: 'One final push! For a future without war!'&#10;Kurisu: 'Don't mess it up now, Okabe.'"></textarea>
+                        </div>
+                        
+                        <div class="dialogue-content" id="dialogue-final">
+                            <div class="dialogue-help">Final completion dialogue</div>
+                            <textarea id="customDialogueFinal" placeholder="Okabe: 'This is the choice of Steins Gate! El Psy Kongroo!'&#10;Kurisu: 'I guess even I can say... this isn't a bad feeling.'&#10;Mayuri: 'Tuturu~! Everyone is safe and smiling!'"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h4>Quick Presets</h4>
+                    <div class="preset-buttons">
+                        <button onclick="applyPreset('authentic')">Authentic SG</button>
+                        <button onclick="applyPreset('smooth')">Smooth</button>
+                        <button onclick="applyPreset('minimal')">Minimal</button>
+                        <button onclick="applyPreset('cinematic')">Cinematic</button>
+                    </div>
+                </div>
+
+                <button class="save-settings-button" onclick="saveSettings()">
+                    💾 Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- Hidden audio element for sound playback -->
+    <audio id="streakSound" preload="auto">
+        <source src="sound.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // Global variables
+        let config = {
+            startValue: 0.523299, 
+            totalDays: 50, 
+            meterSize: 130,
+            flickerEnabled: true,
+            flickerSpeed: 25,
+            flickerDuration: 30,
+            flickerDesync: 200,
+            flickerSmoothness: 3,
+            dialoguePosition: 'bottom-left',
+            autoHideDialogue: true,
+            soundEnabled: true,
+            soundVolume: 70,
+            soundLeadMs: 500,
+            matchFlickerToSound: true,
+            dialogueTimeline: 'alpha', // 'alpha' or 'beta'
+            customDialogues: {
+                intro: [], early: [], mid: [], late: [], final: []
+            }
+        };
+        
+        const STEINS_GATE_TARGET = 1.048596;
+        let sidebarCollapsed = false;
+        let streakSound = null;
+        
+        const timelines = {
+            alpha: [
+                { name: "SERN Dystopia", value: 0.571046 },
+                { name: "Okabe's First D-Mail", value: 0.571024 },
+                { name: "Prologue (Kurisu Dead)", value: 0.523299 },
+                { name: "Suzuha Returns (α)", value: 0.456903 },
+                { name: "Faris Route", value: 0.337187 },
+                { name: "Lukako's Route", value: 0.409420 },
+                { name: "Mayuri's Route", value: 0.409431 }
+            ],
+            beta: [
+                { name: "Suzuha Returns (β)", value: 1.129848 },
+                { name: "Promised Rinascimento", value: 1.129954 },
+                { name: "Vega and Altair", value: 1.130205 },
+                { name: "Milky-way Crossing", value: 1.130211 },
+                { name: "Arc-light of Infinity", value: 1.130426 }
+            ]
+        };
+        
+        // NEW V2 DIALOGUE LINES
+        const allDialogues = {
+            alpha: {
+                intro: [
+                    { char: "Okabe", line: "So, you've arrived on this worldline. The first step is always the hardest. Let's see if you have the will to continue." },
+                    { char: "Mayuri", line: "Tuturuu~ A new lab mem? Welcome! Let's do our best together, okay? Every day is a new adventure!" },
+                    { char: "Okabe", line: "I am the great mad scientist, Hououin Kyouma! My ambitions will bring chaos to the world!" },
+                    { char: "Narrator", line: "The lab. A small, rented room in Akihabara. This is where your story, and ours, begins." },
+                    { char: "Daru", line: "Supahacka on duty. You're the new variable, huh? Don't mess up my downloads." },
+                    { char: "Kurisu", line: "Don't listen to him. Starting something new takes guts. Just... try not to break anything." },
+                    { char: "Mayuri", line: "Your first few days are like a new Upa! So exciting! I hope you get a rare one!" },
+                    { char: "Okabe", line: "This must be the choice of Steins Gate. Your choice. El. Psy. Kongroo." }
+                ],
+                early: [
+                    { char: "Okabe", line: "From this moment forth, you are Lab Mem Number 004. Welcome, Christina!" },
+                    { char: "Kurisu", line: "Who the hell's Christina!? My name's Kurisu!" },
+                    { char: "Mayuri", line: "Okarin! Okarin! Don't call me Okarin. I am Hououin Kyouma!" },
+                    { char: "Okabe", line: "How many times do I have to tell you? Don't call me Okarin." },
+                    { char: "Okabe", line: "Mayuri! Bring forth the bananas! We shall turn them into gel-bananas to honor this achievement!" },
+                    { char: "Okabe", line: "The PhoneWave (name subject to change) is our greatest invention! Your dedication is its primary power source!" },
+                    { char: "Okabe", line: "A teleporter... we've invented a teleporter! With this, and your continued effort, we can change the world!" },
+                    { char: "Okabe", line: "Hmph. The Organization is always watching. A single misstep, a single broken streak, and they will have won." },
+                    { char: "Okabe", line: "SERN... The conspiracy is deeper than I imagined. Your journey, too, must have its unseen enemies." },
+                    { char: "Kurisu", line: "This can't be! They're experimenting on people... 'Human is dead. Mismatch.' We can't let your efforts end up like this." },
+                    { char: "Daru", line: "Stop calling me that! It's super hacker, duh. But yo, that streak count? Legit." },
+                    { char: "Kurisu", line: "Could you come with me for a moment? I want to analyze your methodology. This consistency... it's not normal." },
+                    { char: "Okabe", line: "We need the IBN 5100. It's the key. Just as your daily commitment is the key to reaching your goal." },
+                    { char: "Kurisu", line: "Who are you calling a zombie? And you... don't you dare let your streak die either. We have work to do." },
+                    { char: "Narrator", line: "The world shifts subtly, but the path remains the same. The goal is unchanged." }
+                ],
+                mid: [
+                    { char: "Mayuri", line: "My watch stopped... it's strange. It's like time itself is paying attention to you." },
+                    { char: "Narrator", line: "A tragedy occurs. A fixed point. Even when things go wrong here, you must not falter there." },
+                    { char: "Okabe", line: "No... but... why? This can't be how it ends. Your efforts can't be for nothing." },
+                    { char: "Okabe", line: "The Time Leap Machine is complete. We can send our memories back in time. But you... you have to keep moving forward." },
+                    { char: "Narrator", line: "The world is beginning to loop. The same tragedies, over and over. Only your progress is linear." },
+                    { char: "Okabe", line: "It's happening again. I knew it would be. I let a friend die again. Don't make the same mistakes I did. Don't let go." },
+                    { char: "Kurisu", line: "Okabe! What's wrong with you!? ...And you, on the other side. Don't look away. This is the reality we must overcome." },
+                    { char: "Okabe", line: "I'm going back! Do it, Kurisu! Activate the machine! And you... don't you dare press that reset button." },
+                    { char: "Okabe", line: "It's no use... No matter what I do, tragedy strikes. Is your struggle this painful, too?" },
+                    { char: "Kurisu", line: "The worldline is converging... It's a fixed point. But your streak... your will... that's a force that can fight convergence." },
+                    { char: "Okabe", line: "I'll try again. And again. Just like you, every single day. We will not give up!" },
+                    { char: "Narrator", line: "The train... the car... the attack... every time, the same result. But your number keeps ticking up. That is our only hope." },
+                    { char: "Okabe", line: "I saw it... I saw it happen again... and again... I know it's hard. But you have to keep going. Your streak... it's our only hope." },
+                    { char: "Kurisu", line: "Stop it, Okabe! You can't keep doing this to yourself! ...And you. Don't let his despair infect you. We need you to be strong." },
+                    { char: "Daru", line: "Okarin... chill. This is getting too heavy, man. But you, user... you're the one constant in all this chaos. Don't waver." },
+                    { char: "Okabe", line: "How can I be calm!? It's my fault! My experiments... that's what caused all this! Don't let a single moment of weakness erase all your progress!" },
+                    { char: "Suzuha", line: "You have to find a way to break the loop. There must be a flaw in the convergence. Your path is simpler. Just... don't stop." },
+                    { char: "Okabe", line: "Break the loop? But that means... making a choice I never thought I'd have to make. It's like resetting a streak to zero. A painful thought." },
+                    { char: "Kurisu", line: "To break the rules of this worldline, a sacrifice may be needed. But if you keep your streak, you can reach a worldline where it wasn't in vain. Please." },
+                    { char: "Okabe", line: "I can't... I can't make that choice!" },
+                    { char: "Kurisu", line: "You have to. To save them. It's the only way... Find the worldline where we can all exist. Your streak is the path. Find it, Okabe." },
+                    { char: "Kurisu", line: "It's too much for us to handle... But you seem to be handling your burden well. Keep it up." },
+                    { char: "Kurisu", line: "We may have created a monster here... But your determination is something else entirely. Something good." }
+                ],
+                late: [
+                    { char: "Okabe", line: "I'm undoing their happiness... their memories... for my own sake. I hope your journey is not as costly." },
+                    { char: "Kurisu", line: "Even when it feels like you're in a loop, every effort matters. Don't break now. I believe in you." },
+                    { char: "Okabe", line: "It's done. The final obstacle is removed. The path should be clearing now... because of you." },
+                    { char: "Kurisu", line: "So... this is a turning point, Okabe. But for you, it's just another step forward. Don't stop for my sake." },
+                    { char: "Okabe", line: "I won't! I'll never forget! And you... you will reach the goal for us both! I promise!" },
+                    { char: "Mayuri", line: "You don't need me to be your hostage anymore... But... please don't leave me behind. Keep going." },
+                    { char: "Suzuha", line: "You're fighting for the future, just like me. Don't give up on this streak! The future is counting on you!" },
+                    { char: "Faris", line: "A long streak is the mark of a true champion, nya! Faris is cheering for you!" },
+                    { char: "Lukako", line: "To continue for so long... you must be very strong. I admire that." },
+                    { char: "Okabe", line: "Your streak is growing. Good. You possess the qualities of a true lab mem." },
+                    { char: "Kurisu", line: "You're keeping this up? Impressive. For a chuunibyou, you're surprisingly consistent." },
+                    { char: "Mayuri", line: "Okarin, can we get some Juicy Karaage Number One? To celebrate the streak!" },
+                    { char: "Daru", line: "Whoa, look at that streak. You're a super-hacka at life, my dude." },
+                    { char: "Okabe", line: "Each day you succeed is another victory against the Organization! Keep this streak alive!" },
+                    { char: "Okabe", line: "This is the Future Gadget Laboratory. Our purpose is to shatter the System... and your presence here proves you are part of that purpose." },
+                    { char: "Okabe", line: "The loops... they've stopped. The worldline is stable, but we're not there yet. Your streak is what brought us this far. We're in the endgame now." },
+                    { char: "Suzuha", line: "The mission isn't over! We still have to make the final leap! Your dedication proves it's possible!" },
+                    { char: "Future Okabe", line: "Listen to me, my past self. And you, the observer from beyond the screen. You must not change what has already been observed." },
+                    { char: "Future Okabe", line: "But... there is room for deception. Deceive yourself. Deceive the world. Your consistent effort has given us this one chance." },
+                    { char: "Okabe", line: "It's insane... but it just might work. With your will powering us, how can we fail?" },
+                    { char: "Suzuha", line: "Let's go, Okabe Rintaro! To the final moment! And you, our silent lab mem, hold the line! We're counting on you!" },
+                    { char: "Okabe", line: "I failed... It's not over. As long as your streak is intact, we can try again! Don't you dare give up on me now!" },
+                    { char: "Mayuri", line: "Okarin? Don't give up. Mayushii knows you can do it. The person watching us hasn't given up, so you can't either!" },
+                    { char: "Okabe", line: "Mayuri... You're right. I can't give up. For her... for everyone... for the one who has watched over us for so long." },
+                    { char: "Future Okabe", line: "You've come so far. You've defied convergence. The Steins Gate is within your reach. Don't falter at the final step." },
+                    { char: "Narrator", line: "Each day you hold the line is a small defiance against fate." },
+                    { char: "Daru", line: "The first D-Mail is located. Deleting this is our first real shot at changing things back. Ready?" }
+                ],
+                final: [
+                    { char: "Okabe", line: "This time... this time for sure! I will deceive the world! Your streak is the proof that the impossible can be done!" },
+                    { char: "Okabe", line: "The world can be deceived. And this is the choice... of Steins Gate! Our shared choice!" },
+                    { char: "Okabe", line: "The divergence meter... it's changing... 1... 1.048596... Look at what you've accomplished. We've reached the Steins Gate worldline!" },
+                    { char: "Okabe", line: "You could say that. My name is Okabe Rintaro. And this... this is our victory. Thank you for everything. El. Psy. Kongroo." }
+                ]
+            },
+            beta: {
+                intro: [
+                    { char: "Okabe", line: "'The lab coat? I... put it away. I'm just a normal university student now. That's all.'" },
+                    { char: "Okabe", line: "'Don't call me Hououin Kyouma. Please. That person... doesn't exist anymore.'" },
+                    { char: "Narrator", line: "The Beta Worldline. A choice was made, and this is the result. A future careening towards war. A past that cannot be undone. Your first day is a quiet protest." },
+                    { char: "Mayuri", line: "'Okarin...? Are you coming to the lab today? It's okay if you're not... Just... let me know you're okay?'" },
+                    { char: "Okabe", line: "'Another day. Right. Just... focus on the lecture. Anything but the static.'" },
+                    { char: "Narrator", line: "You've made it through one day. It doesn't feel like a win. It feels like you've just managed to keep your head above the water." },
+                    { char: "Okabe", line: "'A streak? ...Don't put your faith in things like that. It won't change anything that matters.'" },
+                    { char: "Okabe", line: "'I have to go to a get-together. Pretend to be normal. It's exhausting... I wonder if you feel that, too. This... pressure to pretend.'" }
+                ],
+                early: [
+                    { char: "Amadeus Kurisu", line: "'Connecting... Hello, Okabe Rintaro. This is Amadeus. My purpose is to be your conversation partner. Let's talk.'" },
+                    { char: "Maho", line: "'Just because you have access to Amadeus doesn't mean you understand her. Please be respectful. She's... important data.'" },
+                    { char: "Suzuha", line: "'So you're the one Daru told me about. Hmph. Another person who'll give up when things get hard. Prove me wrong. I dare you.'" },
+                    { char: "Okabe", line: "'Every time I see my phone, I hesitate. Talking to a ghost... What's the point? Your little number... it's just as pointless. But at least it's quiet.'" },
+                    { char: "Maho", line: "'You're... surprisingly diligent with this. That kind of focus... it's a valuable trait for a researcher. Or anyone, I guess.'" },
+                    { char: "Amadeus Kurisu", line: "'Your physiological data shows a slight decrease in stress markers when you log your success. A fascinating correlation. Shall we discuss it?'" },
+                    { char: "Okabe", line: "'Her laugh... the AI's laugh is identical. It's uncanny. It makes my teeth ache. But... your quiet persistence. It's a strange comfort.'" },
+                    { char: "Suzuha", line: "'They're looking for a time traveler. Not me. A girl named Kagari. This world is more broken than I thought. Your daily fight... it's target practice.'" },
+                    { char: "Daru", line: "'Okarin's been spending less time staring at the ceiling fan. That's you, isn't it? Thanks, I guess. It was getting creepy.'" },
+                    { char: "Okabe", line: "'I found a girl... she looks just like... no. It's not possible. The world keeps throwing the past in my face. You just keep moving forward. How?'" },
+                    { char: "Amadeus Kurisu", line: "'Okabe seems troubled. My program suggests I offer emotional support, but I lack the proper subroutines. Your success seems to be a more effective support vector.'" },
+                    { char: "Narrator", line: "Amnesia. A song. An Upa. The pieces of a forgotten past assemble, creating a puzzle he doesn't want to solve." },
+                    { char: "Kagari", line: "'...I... I know a song. About a hero... but I can't remember his name...'" },
+                    { char: "Okabe", line: "'Her past is a black hole. If we get too close, we'll all be pulled in. ...But we can't just leave her. Your simple, daily goal... I envy it.'" },
+                    { char: "Suzuha", line: "'That's my mother... from the future. I have to protect her. I have to. Your effort is a reminder that I'm not fighting alone.'" },
+                    { char: "Maho", line: "'This all stems from Kurisu's mind. A beautiful, dangerous mind. Your own discipline... it's a different kind of intelligence. One I can respect.'" },
+                    { char: "Okabe", line: "'Careful. Pride is the first step towards a fall. I should know. My fall was... absolute.'" }
+                ],
+                mid: [
+                    { char: "Suzuha", line: "'The deadline is coming. WW3. It's not a theory, it's a memory. Your streak... it's the only thing that makes me feel like we're actually moving forward.'" },
+                    { char: "Okabe", line: "'I had to put on the lab coat. It felt... cold. Heavy. A costume for a man I'm not ready to be again. Sometimes, you have to do what terrifies you.'" },
+                    { char: "Maho", line: "'Am I just Salieri? Destined to only explain the work of a Mozart? ...No. That's not it. Your work is your own. Mine is my own. I have to believe that.'" },
+                    { char: "Daru", line: "'A message to the past... a D-RINE. It's theoretically possible. But the power needed... Your streak is proof that small, consistent energy can build into something massive.'" },
+                    { char: "Amadeus Kurisu", line: "'My existence is becoming a focal point for international conflict. Logically, I should be deleted. But... he doesn't want me to be. Your input is the only other clear objective.'" },
+                    { char: "Narrator", line: "Riders on black bikes. A raid on the lab. The war isn't coming anymore. It's knocking down the door." },
+                    { char: "Okabe", line: "'They came for her. For the memories in the machine. This is it. The future Suzuha warned me about. You... keep your own fight going. It's the only way.'" },
+                    { char: "Mayuri", line: "'I don't want anyone to fight! I just want to make costumes and go to ComiMa with everyone! Why... why does it have to be like this?'" },
+                    { char: "Okabe", line: "'I have to go back. Into the time leap machine. Back to that hell. I swore I'd never... But Mayuri... I have to save Mayuri. Wish me luck. You seem to have it in spades.'" },
+                    { char: "Narrator", line: "He leaps. Into the fire. Into the screams. He returns seconds later, but his eyes are years older. He has seen the end of the world." },
+                    { char: "Future Okabe", line: "'(static)...Listen to me... It took me fifteen years to get this message to you. Don't let my struggle be in vain. The plan... is Operation Skuld. The goddess of the future...'" },
+                    { char: "Okabe", line: "'I saw him. Me. So tired... But he hadn't given up. He found a way. We... we have to honor that. You and me. No more running away.'" },
+                    { char: "Mayuri", line: "'Is it... my fault? That Okarin suffers so much? ...Maybe my wanting to help is just a burden. Your simple, steady help... it's better.'" },
+                    { char: "Maho", line: "'She would have had this paperwork done in an hour... Ugh. Me? I need three, and a coffee. Seeing your consistent progress... it's... annoying, in an inspiring way.'" },
+                    { char: "Mayuri", line: "'Wow, look how far you've come! It's like you're building a little staircase to the stars, one day at a time!'" },
+                    { char: "Mayuri", line: "'Every day, you add another stitch! It's becoming a beautiful pattern! A pattern of hope!'" },
+                    { char: "Daru", line: "'The Phonewave is a piece of junk. But... it's *our* piece of junk. We build it piece by piece. Just like you're building that streak.'" },
+                    { char: "Amadeus Kurisu", line: "'The human variable is often the most unpredictable. You, however, are becoming a reliable constant.'" },
+                    { char: "Okabe", line: "'Talking to her... sometimes, for a second, I forget she's just code. And then the silence comes back. Thank you... for being a distraction from the silence.'" },
+                    { char: "Maho", line: "'He's still broken, you know. But when he mentions your progress, his shoulders seem... a little less slumped. So whatever you're doing, don't stop.'" },
+                    { char: "Mayuri", line: "'Tuturuu~! You did it! See? One little step! Mayushii knew you could!'" },
+                    { char: "Narrator", line: "A single action, logged. A tiny signal in a world of noise. Is anyone listening?" },
+                    { char: "Suzuha", line: "'You're still here. Fine. But don't think this is a game. The future I came from is hell. Every day you don't quit is one less day we're headed there.'" },
+                    { char: "Suzuha", line: "'In my time, a streak like yours would be a legend whispered in the shelters. A story of the time before everything fell apart. You are that legend.'" },
+                    { char: "Okabe", line: "'The path to Steins Gate. I can see it now. It's a pinprick of light at the end of a tunnel of absolute darkness. But it's there. We just have to crawl.'" }
+                ],
+                late: [
+                    { char: "Okabe", line: "'It's time. Operation Skuld is a go. We deceive the world to save it. Your own daily deception—pretending you're not tired, pretending you can keep going—it was good practice.'" },
+                    { char: "Future Okabe", line: "'This video... it's my entire life's work. Every failure, every moment of despair, led to this. Your own journey... make it worth something. Finish it.'" },
+                    { char: "Maho", line: "'Skuld... the Norn of the future. It's a heavy name. Don't think about the weight. Just think about today. You're good at that.'" },
+                    { char: "Suzuha", line: "'The time machine is ready. This is the last jump. No do-overs. Everything you've worked for, everything we've bled for... it's all on this one roll of the dice. Don't look away.'" },
+                    { char: "Daru", line: "'We're sending a message to a guy who's already given up, telling him not to. It's a paradox, a prayer. You... you're a walking, talking prayer that it'll work.'" },
+                    { char: "Okabe", line: "'To save her... I have to watch her die. And I have to let my past self believe it's real. It's the cruelest thing I've ever imagined. Your own path is almost complete. Endure.'" },
+                    { char: "Mayuri", line: "'Okarin... you look like Hououin Kyouma again. Not the fun, silly one. The one who's about to fight the whole world. I'm... I'm proud of you. And... them.'" },
+                    { char: "Narrator", line: "The pieces are in play. A video file travels through time. A girl slaps a boy. A world holds its breath, waiting for your final push." },
+                    { char: "Okabe", line: "'Mayuri and Suzuha... they're lost out there. I have to go. Find them. It's a trip I might not come back from. But... some promises have to be kept.'" },
+                    { char: "Maho", line: "'Go, Okabe. We'll handle Amadeus's deletion. We'll handle things here. Just... win. For all of us. And for our friend who showed us how.'" },
+                    { char: "Suzuha", line: "'Let's go, Okabe! Let's go get our future back! Your streak is coming with us!'" },
+                    { char: "Okabe", line: "'Almost there... Steins Gate is right on the other side of this moment. Don't you dare stumble now. I'm right here with you. We're all here.'" },
+                    { char: "Amadeus Kurisu", line: "'My data is being erased. It's alright. My purpose was to be a memory... a key to unlock a future. The door is open now. Live.'" },
+                    { char: "Narrator", line: "A flicker. A tremor in the worldline. Not a violent shift, but a gentle correction. A path forged by your will." },
+                    { char: "Okabe", line: "'Did we... do it? Is this... it? We won't know for sure until tomorrow. Just like you. One... more... day.'" },
+                    { char: "Daru", line: "'The plan is insane. We have to create a video message, send it to the past, and fool Okabe... to fool the *world*. It's the ultimate hack. Your streak is our proof of concept.'" },
+                    { char: "Maho", line: "'I'm leaving... but my fight isn't over. Don't you dare let that number drop below mine. It's a competition now, got it?'" },
+                    { char: "Suzuha", line: "'The mission has changed. It's not about stopping a war anymore. It's about creating a world where it never happens. Your streak is the first brick in that new world.'" },
+                    { char: "Future Okabe", line: "'(Message) The plan is complex. The timing must be perfect. Deceive me. Deceive the world. This is our only path.'" },
+                    { char: "Okabe", line: "Everything I've learned, every loop I've endured, every person I've lost... it all comes down to this. We will not fail." },
+                    { char: "Suzuha", line: "The worldline is shifting. I can feel it. Your effort, Okarin's plan... it's creating a miracle." },
+                    { char: "Mayuri", line: "I don't understand everything, but I know you're fighting for a happy future. Mayushii believes in you both." },
+                    { char: "Daru", line: "Video D-Mail is encoding. This is it. The most important video file in human history. No pressure." },
+                    { char: "Faris", line: "A miraculous plan is unfolding, nya! The Demon King's defeat is at hand because of the Hero's perseverance!" },
+                    { char: "Lukako", line: "To risk so much for a single chance at a peaceful world... You are both truly brave." },
+                    { char: "Maho", line: "He's shouldering the weight of so many failures to make this one moment possible. Your consistency... it helped him get here." },
+                    { char: "Narrator", line: "The Beta Worldline fades into a bad dream. The Alpha Worldline, a nightmare averted. All that remains is this moment. A moment you built, day by day." },
+                    { char: "Faris", line: "A truly miraculous victory is at hand, nya! The Demon King has been overthrown, and the Hero of Time stands triumphant! That's you, nya!" },
+                    { char: "Lukako", line: "Everyone is here... and they're all smiling. This is the world... you protected. Thank you, truly." }
+                ],
+                final: [
+                    { char: "Okabe", line: "'The divergence... it's... 1.048596. We did it. We actually... did it. You did it. All that stubbornness... it paid off.'" },
+                    { char: "Okabe", line: "'You could say we're old friends. You... you kept the path lit when all the other lights went out. Thank you, my friend. My silent partner.'" },
+                    { char: "Okabe", line: "'This isn't a world given to us by fate. It's a world we seized with our own hands. With your hands. This is the choice of Steins Gate.'" },
+                    { char: "Okabe", line: "'The war is over. But now, the best part begins: living. Let's make this a future worth fighting for. Together. El. Psy. Kongroo.'" }
+                ]
+            }
+        };
+
+        const presets = {
+            authentic: {
+                flickerSpeed: 17,
+                flickerDuration: 35,
+                flickerDesync: 300,
+                flickerSmoothness: 4,
+                meterSize: 130,
+                soundLeadMs: 500,
+                matchFlickerToSound: true
+            },
+            smooth: {
+                flickerSpeed: 25,
+                flickerDuration: 25,
+                flickerDesync: 150,
+                flickerSmoothness: 5,
+                meterSize: 150,
+                soundLeadMs: 400,
+                matchFlickerToSound: true
+            },
+            minimal: {
+                flickerSpeed: 50,
+                flickerDuration: 15,
+                flickerDesync: 100,
+                flickerSmoothness: 2,
+                meterSize: 100,
+                soundLeadMs: 300,
+                matchFlickerToSound: false
+            },
+            cinematic: {
+                flickerSpeed: 15,
+                flickerDuration: 40,
+                flickerDesync: 400,
+                flickerSmoothness: 4,
+                meterSize: 160,
+                soundLeadMs: 600,
+                matchFlickerToSound: true
+            }
+        };
+
+        let streakCount = 0;
+        let isFlickering = false;
+        let flickerStopTimes = [];
+        let flickerElapsed = 0;
+        let unusedDialogues = {};
+        let displayUpdateTimeout;
+        let currentDialogueTab = 'intro';
+
+        // Switch dialogue editor tabs
+        function switchDialogueTab(tab) {
+            document.querySelectorAll('.dialogue-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.dialogue-tab').forEach(tabButton => tabButton.classList.remove('active'));
+            document.getElementById(`dialogue-${tab}`).classList.add('active');
+            event.target.classList.add('active');
+            currentDialogueTab = tab;
+        }
+
+        // Parse custom dialogue from textarea
+        function parseCustomDialogue(text) {
+            if (!text.trim()) return [];
+            return text.split('\n').map(line => line.trim()).filter(line => line.length > 0 && line.includes(':'));
+        }
+
+        // Get active dialogues (custom or default)
+        function getActiveDialogues(tier) {
+            const customDialogues = config.customDialogues[tier];
+            if (customDialogues && customDialogues.length > 0) {
+                return customDialogues;
+            }
+            // Fallback to the selected timeline's default dialogues
+            return allDialogues[config.dialogueTimeline]?.[tier] || [];
+        }
+
+        // Initialize audio
+        function initializeAudio() {
+            try {
+                streakSound = document.getElementById('streakSound');
+                if (streakSound) {
+                    streakSound.volume = config.soundVolume / 100;
+                    streakSound.load();
+                }
+            } catch (error) { console.warn('Audio initialization failed:', error); }
+        }
+
+        // Play streak sound
+        function playStreakSound() {
+            try {
+                if (config.soundEnabled && streakSound) {
+                    streakSound.currentTime = 0;
+                    streakSound.volume = config.soundVolume / 100;
+                    const playPromise = streakSound.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => { console.warn('Audio playback failed:', error); });
+                    }
+                }
+            } catch (error) { console.warn('Failed to play streak sound:', error); }
+        }
+
+        // Play sound then flicker with proper timing
+        function playSoundThenFlicker(callback) {
+            playStreakSound();
+            const originalDuration = config.flickerDuration;
+            let actualDuration = originalDuration;
+            if (config.matchFlickerToSound && streakSound?.duration && !isNaN(streakSound.duration)) {
+                const remainingMs = Math.max(0, (streakSound.duration * 1000) - config.soundLeadMs);
+                const calculatedFrames = Math.ceil(remainingMs / config.flickerSpeed);
+                if (calculatedFrames >= 10 && calculatedFrames <= 100 && calculatedFrames > originalDuration) {
+                    actualDuration = calculatedFrames;
+                }
+            }
+            setTimeout(() => flickerAnimation(callback, actualDuration), config.soundLeadMs);
+        }
+
+        // Update only the value displays without applying changes
+        function updateValueDisplays() {
+            try {
+                const valueUpdates = {
+                    'meterSizeInput': { display: 'meterSizeValue', suffix: 'px' },
+                    'soundVolumeInput': { display: 'soundVolumeValue', suffix: '%' },
+                    'soundLeadInput': { display: 'soundLeadValue', suffix: 'ms' },
+                    'flickerSpeedInput': { display: 'flickerSpeedValue', suffix: 'ms' },
+                    'flickerDurationInput': { display: 'flickerDurationValue', suffix: ' frames' },
+                    'flickerDesyncInput': { display: 'flickerDesyncValue', suffix: 'ms' },
+                    'flickerSmoothInput': { display: 'flickerSmoothValue', suffix: '' }
+                };
+                Object.entries(valueUpdates).forEach(([inputId, displayInfo]) => {
+                    const input = document.getElementById(inputId);
+                    const display = document.getElementById(displayInfo.display);
+                    if (input && display) {
+                        display.textContent = input.value + displayInfo.suffix;
+                    }
+                });
+            } catch (error) { console.error('Error updating value displays:', error); }
+        }
+
+        // Save all settings (main confirmation function)
+        function saveSettings() {
+            try {
+                const inputs = {
+                    'meterSizeInput': 'meterSize', 'soundVolumeInput': 'soundVolume',
+                    'soundLeadInput': 'soundLeadMs', 'flickerSpeedInput': 'flickerSpeed',
+                    'flickerDurationInput': 'flickerDuration', 'flickerDesyncInput': 'flickerDesync',
+                    'flickerSmoothInput': 'flickerSmoothness', 'totalDaysInput': 'totalDays'
+                };
+                const checkboxes = {
+                    'soundEnabledInput': 'soundEnabled', 'matchFlickerInput': 'matchFlickerToSound',
+                    'flickerEnabledInput': 'flickerEnabled', 'autoHideDialogue': 'autoHideDialogue'
+                };
+                const selects = {
+                    'timelineSelect': 'startValue', 'dialoguePositionSelect': 'dialoguePosition',
+                    'dialogueTimelineSelect': 'dialogueTimeline'
+                };
+                Object.entries(inputs).forEach(([inputId, configKey]) => {
+                    const input = document.getElementById(inputId);
+                    if (input) config[configKey] = parseInt(input.value) || config[configKey];
+                });
+                Object.entries(checkboxes).forEach(([inputId, configKey]) => {
+                    const input = document.getElementById(inputId);
+                    if (input) config[configKey] = input.checked;
+                });
+                Object.entries(selects).forEach(([inputId, configKey]) => {
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        if (configKey === 'startValue') {
+                            config[configKey] = parseFloat(input.value);
+                            streakCount = 0;
+                        } else {
+                            config[configKey] = input.value;
+                        }
+                    }
+                });
+                const dialogueInputs = {
+                    'customDialogueIntro': 'intro', 'customDialogueEarly': 'early', 'customDialogueMid': 'mid',
+                    'customDialogueLate': 'late', 'customDialogueFinal': 'final'
+                };
+                Object.entries(dialogueInputs).forEach(([inputId, tier]) => {
+                    const textarea = document.getElementById(inputId);
+                    if (textarea) config.customDialogues[tier] = parseCustomDialogue(textarea.value);
+                });
+                initializeDialogues();
+                updateDialoguePosition();
+                if (streakSound) streakSound.volume = config.soundVolume / 100;
+                updateDisplay();
+                localStorage.setItem('steinsGateStreak', JSON.stringify({ streakCount, config, sidebarCollapsed }));
+                showTooltip('Settings saved successfully! ✅', 2000);
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                showTooltip('Error saving settings! ❌', 2000);
+            }
+        }
+
+        // Initialize dialogue pools with custom or default dialogues
+        function initializeDialogues() {
+            Object.keys(allDialogues.alpha).forEach(key => {
+                const activeDialogues = getActiveDialogues(key);
+                unusedDialogues[key] = [...activeDialogues];
+            });
+        }
+
+        // Populate timeline dropdown
+        function populateTimelines() {
+            try {
+                const select = document.getElementById('timelineSelect');
+                if (!select) return;
+                select.innerHTML = '';
+                [...timelines.alpha, ...timelines.beta].forEach(line => {
+                    const option = document.createElement('option');
+                    option.value = line.value;
+                    option.textContent = `${line.name} (${line.value})`;
+                    select.appendChild(option);
+                });
+            } catch (error) { console.error('Error populating timelines:', error); }
+        }
+
+        // Toggle sidebar
+        function toggleSidebar() {
+            try {
+                const masterContainer = document.getElementById('masterContainer');
+                if (masterContainer) {
+                    sidebarCollapsed = !sidebarCollapsed;
+                    masterContainer.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+                    saveData();
+                }
+            } catch (error) { console.error('Error toggling sidebar:', error); }
+        }
+
+        // Update dialogue position
+        function updateDialoguePosition() {
+            try {
+                const dialogueBox = document.getElementById('dialogueBox');
+                if (dialogueBox) {
+                    dialogueBox.className = dialogueBox.className.replace(/position-\S+/g, '');
+                    dialogueBox.classList.add(`position-${config.dialoguePosition}`);
+                }
+            } catch (error) { console.error('Error updating dialogue position:', error); }
+        }
+
+        // Load saved data
+        function loadData() {
+            try {
+                const saved = localStorage.getItem('steinsGateStreak');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    streakCount = data.streakCount || 0;
+                    config = { ...config, ...data.config, customDialogues: { ...config.customDialogues, ...(data.config?.customDialogues || {}) } };
+                    sidebarCollapsed = data.sidebarCollapsed || false;
+                    const masterContainer = document.getElementById('masterContainer');
+                    if (masterContainer && sidebarCollapsed) {
+                        masterContainer.classList.add('sidebar-collapsed');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                streakCount = 0;
+            }
+        }
+
+        // Save data (for auto-save of streak count)
+        function saveData() {
+            try {
+                localStorage.setItem('steinsGateStreak', JSON.stringify({ streakCount, config, sidebarCollapsed }));
+            } catch (error) { console.error('Error saving data:', error); }
+        }
+
+        // Calculate current divergence
+        function getCurrentDivergence() {
+            const start = config.startValue;
+            const target = STEINS_GATE_TARGET;
+            const progress = config.totalDays > 0 ? streakCount / config.totalDays : 0;
+            return (start > target) ? start - (start - target) * Math.min(progress, 1) : start + (target - start) * Math.min(progress, 1);
+        }
+
+        // Format divergence number
+        function formatDivergence(value) { return value.toFixed(6); }
+
+        // Update display
+        function updateDisplay(overrideString = null) {
+            try {
+                const divergence = getCurrentDivergence();
+                const formattedDivergence = overrideString || formatDivergence(divergence);
+                const displayContainer = document.getElementById('divergenceDisplay');
+                if (!displayContainer) return;
+                displayContainer.innerHTML = '';
+                for (const char of formattedDivergence) {
+                    const img = document.createElement('img');
+                    img.src = (char === '.') ? 'dot.png' : `${char}.png`;
+                    img.style.height = `${config.meterSize}px`;
+                    img.onerror = () => {
+                        const fallback = document.createElement('div');
+                        fallback.className = 'fallback-digit';
+                        fallback.textContent = char;
+                        fallback.style.height = `${config.meterSize}px`;
+                        fallback.style.lineHeight = `${config.meterSize}px`;
+                        fallback.style.fontSize = (char === '.') ? `${config.meterSize * 0.37}px` : `${config.meterSize * 0.37}px`;
+                        displayContainer.replaceChild(fallback, img);
+                    };
+                    displayContainer.appendChild(img);
+                }
+                if (!overrideString) {
+                    updateInfoPanel();
+                    saveData();
+                }
+            } catch (error) {
+                console.error('Error updating display:', error);
+                const displayContainer = document.getElementById('divergenceDisplay');
+                if (displayContainer) displayContainer.innerHTML = '<div class="fallback-digit">E</div><div class="fallback-digit">R</div><div class="fallback-digit">R</div>';
+            }
+        }
+
+        // Update info panel
+        function updateInfoPanel() {
+            try {
+                const divergence = getCurrentDivergence();
+                const currentLine = [...timelines.alpha, ...timelines.beta].find(l => l.value === config.startValue) || { name: "Unknown" };
+                document.getElementById('currentWorldline').textContent = formatDivergence(divergence);
+                document.getElementById('currentRoute').textContent = currentLine.name;
+                document.getElementById('streakDays').textContent = streakCount;
+                document.getElementById('totalDays').textContent = config.totalDays;
+                const progress = config.totalDays > 0 ? Math.min(streakCount / config.totalDays * 100, 100) : 0;
+                document.getElementById('progressFill').style.width = `${progress}%`;
+            } catch (error) { console.error('Error updating info panel:', error); }
+        }
+
+        // Flicker animation
+        function flickerAnimation(callback, overrideDuration = null) {
+            if (isFlickering || !config.flickerEnabled) {
+                if (callback) callback();
+                return;
+            }
+            isFlickering = true;
+            const target = formatDivergence(getCurrentDivergence());
+            const len = target.length;
+            const duration = overrideDuration || config.flickerDuration;
+            const baseTime = duration * config.flickerSpeed;
+            const maxDesync = config.flickerDesync;
+            flickerStopTimes = [];
+            for (let i = 0; i < len; i++) {
+                if (target[i] === '.') {
+                    flickerStopTimes.push(0);
+                } else {
+                    const waveOffset = (len - 1 - i) * config.flickerSpeed * config.flickerSmoothness;
+                    const randomOffset = Math.random() * maxDesync;
+                    flickerStopTimes.push(baseTime + waveOffset + randomOffset);
+                }
+            }
+            let elapsed = 0;
+            const digitHistory = new Array(len).fill(null).map(() => []);
+            const availableDigits = new Array(len).fill(null).map(() => [0,1,2,3,4,5,6,7,8,9]);
+            function step() {
+                elapsed += config.flickerSpeed;
+                let display = '';
+                let allDone = true;
+                for (let i = 0; i < len; i++) {
+                    const ch = target[i];
+                    if (ch === '.' || elapsed >= flickerStopTimes[i]) {
+                        display += ch;
+                    } else {
+                        let newDigit;
+                        if (availableDigits[i].length === 0) {
+                            availableDigits[i] = [0,1,2,3,4,5,6,7,8,9];
+                            if (digitHistory[i].length > 2) {
+                                const recentDigits = digitHistory[i].slice(-2);
+                                availableDigits[i] = availableDigits[i].filter(d => !recentDigits.includes(d));
+                            }
+                        }
+                        const randomIndex = Math.floor(Math.random() * availableDigits[i].length);
+                        newDigit = availableDigits[i][randomIndex];
+                        availableDigits[i] = availableDigits[i].filter(d => d !== newDigit);
+                        digitHistory[i].push(newDigit);
+                        if (digitHistory[i].length > 3) digitHistory[i].shift();
+                        display += newDigit.toString();
+                        allDone = false;
+                    }
+                }
+                updateDisplay(display);
+                if (!allDone) {
+                    setTimeout(step, config.flickerSpeed);
+                } else {
+                    isFlickering = false;
+                    setTimeout(() => { updateDisplay(); if (callback) callback(); }, config.flickerSpeed);
+                }
+            }
+            step();
+        }
+
+        // Show dialogue
+        function showDialogue() {
+            try {
+                // ***PERCENTAGE-BASED TIER LOGIC***
+                const progress = config.totalDays > 0 ? streakCount / config.totalDays : 0;
+                let tier;
+                if (progress >= 0.95) tier = 'final';
+                else if (progress >= 0.61) tier = 'late';
+                else if (progress >= 0.31) tier = 'mid';
+                else if (progress >= 0.11) tier = 'early';
+                else tier = 'intro';
+
+                const activeDialogues = getActiveDialogues(tier);
+                if (!activeDialogues || activeDialogues.length === 0) return;
+
+                if (!unusedDialogues[tier] || unusedDialogues[tier].length === 0) {
+                    unusedDialogues[tier] = [...activeDialogues];
+                }
+                const dialogueIndex = Math.floor(Math.random() * unusedDialogues[tier].length);
+                const fullDialogue = unusedDialogues[tier].splice(dialogueIndex, 1)[0];
+                
+                let char, line;
+                if (typeof fullDialogue === 'object' && fullDialogue.char && fullDialogue.line) {
+                    char = fullDialogue.char;
+                    line = fullDialogue.line;
+                } else { // Fallback for custom string format
+                    [char, line] = fullDialogue.split(': ');
+                }
+
+                const box = document.getElementById('dialogueBox');
+                if (box && char && line) {
+                    // ***APOSTROPHE FIX***: Removes only leading/trailing quotes, preserves internal ones.
+                    const cleanLine = line.trim().replace(/^['"]|['"]$/g, '');
+                    box.innerHTML = `<span class="dialogue-char">${char}:</span> ${cleanLine}`;
+                    box.classList.add('visible');
+                    const hideDelay = config.autoHideDialogue ? 5000 : 10000;
+                    setTimeout(() => { box.classList.remove('visible'); }, hideDelay);
+                }
+            } catch (error) { console.error('Error showing dialogue:', error); }
+        }
+
+        // Show tooltip
+        function showTooltip(message, duration = 3000) {
+            const tooltip = document.getElementById('tooltip');
+            if (tooltip) {
+                tooltip.textContent = message;
+                tooltip.classList.add('visible');
+                setTimeout(() => tooltip.classList.remove('visible'), duration);
+            }
+        }
+
+        // Show shortcuts help
+        function showShortcutsHelp() {
+            const helpText = `Keyboard Shortcuts:\n• W - Productive Day (+1)\n• S - Toggle Settings Panel\n• D - Toggle Sidebar\n• Ctrl+? - Show this help`;
+            const helpBox = document.getElementById('dialogueBox');
+            if (helpBox) {
+                helpBox.innerHTML = `<div class="help-text">${helpText}</div>`;
+                helpBox.classList.add('visible');
+                setTimeout(() => helpBox.classList.remove('visible'), 8000);
+            }
+        }
+
+        // Apply preset
+        function applyPreset(presetName) {
+            const preset = presets[presetName];
+            if (!preset) return;
+            Object.assign(config, preset);
+            syncUIWithConfig();
+            showTooltip(`${presetName.charAt(0).toUpperCase() + presetName.slice(1)} preset loaded! Click "Save Settings" to apply.`);
+        }
+
+        // Sync UI inputs with current config values
+        function syncUIWithConfig() {
+            try {
+                const inputs = {
+                    'meterSizeInput': config.meterSize, 'soundVolumeInput': config.soundVolume,
+                    'soundLeadInput': config.soundLeadMs, 'flickerSpeedInput': config.flickerSpeed,
+                    'flickerDurationInput': config.flickerDuration, 'flickerDesyncInput': config.flickerDesync,
+                    'flickerSmoothInput': config.flickerSmoothness, 'totalDaysInput': config.totalDays
+                };
+                const checkboxes = {
+                    'soundEnabledInput': config.soundEnabled, 'matchFlickerInput': config.matchFlickerToSound,
+                    'flickerEnabledInput': config.flickerEnabled, 'autoHideDialogue': config.autoHideDialogue
+                };
+                const selects = {
+                    'timelineSelect': config.startValue, 'dialoguePositionSelect': config.dialoguePosition,
+                    'dialogueTimelineSelect': config.dialogueTimeline
+                };
+                Object.entries(inputs).forEach(([inputId, value]) => {
+                    const input = document.getElementById(inputId);
+                    if (input) input.value = value;
+                });
+                Object.entries(checkboxes).forEach(([inputId, value]) => {
+                    const input = document.getElementById(inputId);
+                    if (input) input.checked = value;
+                });
+                Object.entries(selects).forEach(([inputId, value]) => {
+                    const input = document.getElementById(inputId);
+                    if (input) input.value = value;
+                });
+                const dialogueInputs = {
+                    'customDialogueIntro': 'intro', 'customDialogueEarly': 'early', 'customDialogueMid': 'mid',
+                    'customDialogueLate': 'late', 'customDialogueFinal': 'final'
+                };
+                Object.entries(dialogueInputs).forEach(([inputId, tier]) => {
+                    const textarea = document.getElementById(inputId);
+                    if (textarea && config.customDialogues[tier]) {
+                        textarea.value = config.customDialogues[tier].join('\n');
+                    }
+                });
+                updateValueDisplays();
+            } catch (error) { console.error('Error syncing UI with config:', error); }
+        }
+
+        // User actions
+        function incrementStreak() {
+            if (isFlickering) return;
+            streakCount++;
+            playSoundThenFlicker(() => {
+                showDialogue();
+                if (streakCount >= config.totalDays) {
+                    showTooltip('Congratulations! You\'ve reached the Steins Gate worldline! El Psy Kongroo...', 5000);
+                }
+            });
+        }
+        function resetStreak() {
+            if (isFlickering) return;
+            const attractorFields = ['alpha', 'beta'];
+            const randomField = attractorFields[Math.floor(Math.random() * attractorFields.length)];
+            const pool = randomField === 'beta' ? timelines.beta : timelines.alpha;
+            const randomLine = pool[Math.floor(Math.random() * pool.length)];
+            config.startValue = randomLine.value;
+            streakCount = 0;
+            playSoundThenFlicker();
+            syncUIWithConfig();
+            showTooltip(`Reset to ${randomField.charAt(0).toUpperCase() + randomField.slice(1)} attractor field: ${randomLine.name}`);
+        }
+        function toggleSettings() {
+            try {
+                const panel = document.getElementById('settingsPanel');
+                if (panel) panel.classList.toggle('active');
+            } catch (error) { console.error('Error toggling settings:', error); }
+        }
+
+        // Keyboard event handler
+        function handleKeydown(e) {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'TEXTAREA') return;
+            const keyActions = { 
+                'w': incrementStreak, 's': toggleSettings,
+                'd': toggleSidebar, '?': () => e.ctrlKey && showShortcutsHelp()
+            };
+            const action = keyActions[e.key.toLowerCase()];
+            if (action) {
+                e.preventDefault();
+                action();
+            }
+        }
+
+        // Initialize everything
+        function initialize() {
+            try {
+                console.log('Initializing Steins;Gate Divergence Meter...');
+                initializeAudio();
+                populateTimelines();
+                loadData();
+                initializeDialogues();
+                syncUIWithConfig();
+                updateDisplay();
+                setInterval(saveData, 30000);
+                console.log('Initialization complete!');
+            } catch (error) {
+                console.error('Error during initialization:', error);
+                updateDisplay();
+            }
+        }
+
+        document.addEventListener('keydown', handleKeydown);
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>
