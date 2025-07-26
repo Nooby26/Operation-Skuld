@@ -1535,56 +1535,68 @@
 				document.getElementById('initializationOverlay').classList.add('hidden');
 				return;
 			}
+
 			const overlay = document.getElementById('initializationOverlay');
 			const progressFill = document.getElementById('initProgressFill');
 			const status = document.getElementById('initStatus');
+
+			// All your loading steps, including preloading, treated as one seamless sequence
 			const steps = [
-				'Preloading images & sounds...',
-				'Loading visual novel engine...',
-				'Initializing divergence calculator...',
-				'Connecting to worldline database...',
-				'Loading character sprites...',
-				'Synchronizing timeline data...',
-				'SYSTEM READY'
+				{ text: 'Preloading images & sounds...', duration: 1500 }, // duration in ms
+				{ text: 'Loading visual novel engine...', duration: 800 },
+				{ text: 'Initializing divergence calculator...', duration: 800 },
+				{ text: 'Connecting to worldline database...', duration: 800 },
+				{ text: 'Loading character sprites...', duration: 800 },
+				{ text: 'Synchronizing timeline data...', duration: 800 },
+				{ text: 'SYSTEM READY', duration: 400 }
 			];
+
 			let currentStep = 0;
+			let progress = 0;
+			const totalDuration = steps.reduce((sum, s) => sum + s.duration, 0);
+			let preloadFinished = false;
 
-			function preloadStep() {
-				status.textContent = steps[0];
-				progressFill.style.width = `4%`;
-				preloadAllAssets(
-					(loaded, total) => {
-						progressFill.style.width = `${Math.floor(4 + 38 * (loaded / total))}%`;
-					},
-					() => {
-						currentStep++;
-						nextStep();
-					}
-				);
-			}
+			// Start real asset preloading in background
+			preloadAllAssets(
+				null, // no per-file progress callback needed here
+				() => { preloadFinished = true; } // signal preload done
+			);
 
-			function nextStep() {
-				if (currentStep === 0) {
-					preloadStep();
+			function updateProgressBar() {
+				if (currentStep >= steps.length) {
+					// Loading complete
+					progressFill.style.width = '100%';
+					overlay.classList.add('hidden');
 					return;
 				}
-				if (currentStep < steps.length) {
-					status.textContent = steps[currentStep];
-					progressFill.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
-					setTimeout(() => {
-						currentStep++;
-						if (currentStep < steps.length) {
-							nextStep();
-						} else {
-							setTimeout(() => {
-								overlay.classList.add('hidden');
-							}, 500);
-						}
-					}, 800);
+
+				const elapsedInStep = (Date.now() - stepStartTime);
+				const step = steps[currentStep];
+				let stepProgress = Math.min(elapsedInStep / step.duration, 1);
+
+				// Prevent progress from advancing beyond 0% for preloading until done
+				if (currentStep === 0 && !preloadFinished) {
+					stepProgress = 0;
 				}
+
+				// Calculate combined progress percentage
+				const prevStepsDuration = steps.slice(0, currentStep).reduce((sum, s) => sum + s.duration, 0);
+				progress = ((prevStepsDuration + stepProgress * step.duration) / totalDuration) * 100;
+
+				// Update progress bar and status text
+				progressFill.style.width = `${progress.toFixed(2)}%`;
+				status.textContent = step.text;
+
+				if (stepProgress >= 1) {
+					currentStep++;
+					stepStartTime = Date.now();
+				}
+
+				requestAnimationFrame(updateProgressBar);
 			}
 
-			setTimeout(nextStep, 500);
+			let stepStartTime = Date.now();
+			updateProgressBar();
 		}
 
         // Enhanced particle system
