@@ -1420,48 +1420,172 @@
         let unusedDialogues = {};
         let currentDialogueTab = 'intro';
 
-        // AMADEUS-style initialization animation
-        function runInitialization() {
-            if (!config.initAnimation) {
-                document.getElementById('initializationOverlay').classList.add('hidden');
-                return;
-            }
+		function preloadAllAssets(onProgress, onComplete) {
+			const paths = [
+				"dot.png",
+				"empty.png",
+				"0.png",
+				"1.png",
+				"2.png",
+				"3.png",
+				"4.png",
+				"5.png",
+				"6.png",
+				"7.png",
+				"8.png",
+				"9.png",
+				"background.png",
+				"sound.mp3",
+				"percentage.png",
+				// Alpha timeline sprites
+				"sprites/alpha/daru_canthelpitbruh.png",
+				"sprites/alpha/daru_curious.png",
+				"sprites/alpha/daru_defaultstare.png",
+				"sprites/alpha/daru_defaultstarehorny.png",
+				"sprites/alpha/daru_mad.png",
+				"sprites/alpha/faris_abouttocry.png",
+				"sprites/alpha/faris_blush.png",
+				"sprites/alpha/faris_happy.png",
+				"sprites/alpha/faris_pleading.png",
+				"sprites/alpha/faris_sad.png",
+				"sprites/alpha/faris_seriousshock.png",
+				"sprites/alpha/faris_shocked.png",
+				"sprites/alpha/faris_wink.png",
+				"sprites/alpha/kurisu_blush.png",
+				"sprites/alpha/kurisu_concerned.png",
+				"sprites/alpha/kurisu_defaultstare.png",
+				"sprites/alpha/kurisu_determined.png",
+				"sprites/alpha/kurisu_disgustedatyou.png",
+				"sprites/alpha/kurisu_feelgood.png",
+				"sprites/alpha/kurisu_happy.png",
+				"sprites/alpha/kurisu_mad.png",
+				"sprites/alpha/kurisu_madashell.png",
+				"sprites/alpha/kurisu_wink.png",
+				"sprites/alpha/lukako_abouttocry.png",
+				"sprites/alpha/lukako_blush.png",
+				"sprites/alpha/lukako_crying.png",
+				"sprites/alpha/lukako_defaultstare.png",
+				"sprites/alpha/lukako_happy.png",
+				"sprites/alpha/mayuri_blushcry.png",
+				"sprites/alpha/mayuri_cheering.png",
+				"sprites/alpha/mayuri_concerned.png",
+				"sprites/alpha/mayuri_curious.png",
+				"sprites/alpha/mayuri_defaultstare.png",
+				"sprites/alpha/mayuri_happy.png",
+				"sprites/alpha/mayuri_littlesadshock.png",
+				"sprites/alpha/mayuri_verysad.png",
+				"sprites/alpha/narrator_defaultstare.png",
+				"sprites/alpha/okabe_angry.png",
+				"sprites/alpha/okabe_angryshout.png",
+				"sprites/alpha/okabe_defaultstare.png",
+				"sprites/alpha/okabe_hesitant.png",
+				"sprites/alpha/okabe_sad.png",
+				"sprites/alpha/okabe_sad2.png",
+				"sprites/alpha/okabe_smirk.png",
+				"sprites/alpha/okabe_smirk2.png",
+				"sprites/alpha/suzuha_blush.png",
+				"sprites/alpha/suzuha_defaultstare.png",
+				"sprites/alpha/suzuha_happy.png",
+				"sprites/alpha/suzuha_littledisgust.png",
+				"sprites/alpha/suzuha_mybad.png",
+				"sprites/alpha/suzuha_stare.png",
+				"sprites/alpha/suzuha_sternangry.png",
+				"sprites/alpha/suzuha_you'reuseless.png",
+				"sprites/alpha/daru_canthelpit.png",
+				// Beta timeline sprites
+				"sprites/beta/faris_defaultstare.png",
+				"sprites/beta/futureokabe_defaultstare.png",
+				"sprites/beta/kagari_defaultstare.png",
+				"sprites/beta/lukako_defaultstare.png",
+				"sprites/beta/maho_defaultstare.png",
+				"sprites/beta/mayuri_defaultstare.png",
+				"sprites/beta/narrator_defaultstare.png",
+				"sprites/beta/okabe_defaultstare.png",
+				"sprites/beta/suzuha_defaultstare.png",
+				"sprites/beta/amadeus_defaultstare.png",
+				"sprites/beta/daru_defaultstare.png"
+				// (If you add more, add them here)
+			];
 
-            const overlay = document.getElementById('initializationOverlay');
-            const progressFill = document.getElementById('initProgressFill');
-            const status = document.getElementById('initStatus');
-            
-            const steps = [
-                'Loading visual novel engine...',
-                'Initializing divergence calculator...',
-                'Connecting to worldline database...',
-                'Loading character sprites...',
-                'Synchronizing timeline data...',
-                'SYSTEM READY'
-            ];
-            
-            let currentStep = 0;
-            
-            function nextStep() {
-                if (currentStep < steps.length) {
-                    status.textContent = steps[currentStep];
-                    progressFill.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
-                    
-                    setTimeout(() => {
-                        currentStep++;
-                        if (currentStep < steps.length) {
-                            nextStep();
-                        } else {
-                            setTimeout(() => {
-                                overlay.classList.add('hidden');
-                            }, 500);
-                        }
-                    }, 800);
-                }
-            }
-            
-            setTimeout(nextStep, 500);
-        }
+			let loaded = 0;
+			function fileLoaded() {
+				loaded++;
+				if (onProgress) onProgress(loaded, paths.length);
+				if (loaded === paths.length && onComplete) onComplete();
+			}
+
+			paths.forEach(path => {
+				const ext = path.split('.').pop().toLowerCase();
+				if (ext === 'mp3' || ext === 'wav') {
+					const audio = new Audio();
+					audio.oncanplaythrough = fileLoaded;
+					audio.onerror = fileLoaded;
+					audio.src = path;
+				} else {
+					const img = new Image();
+					img.onload = fileLoaded;
+					img.onerror = fileLoaded;
+					img.src = path;
+				}
+			});
+		}
+        // AMADEUS-style initialization animation
+		function runInitialization() {
+			if (!config.initAnimation) {
+				document.getElementById('initializationOverlay').classList.add('hidden');
+				return;
+			}
+			const overlay = document.getElementById('initializationOverlay');
+			const progressFill = document.getElementById('initProgressFill');
+			const status = document.getElementById('initStatus');
+			const steps = [
+				'Preloading images & sounds...',
+				'Loading visual novel engine...',
+				'Initializing divergence calculator...',
+				'Connecting to worldline database...',
+				'Loading character sprites...',
+				'Synchronizing timeline data...',
+				'SYSTEM READY'
+			];
+			let currentStep = 0;
+
+			function preloadStep() {
+				status.textContent = steps[0];
+				progressFill.style.width = `4%`;
+				preloadAllAssets(
+					(loaded, total) => {
+						progressFill.style.width = `${Math.floor(4 + 38 * (loaded / total))}%`;
+					},
+					() => {
+						currentStep++;
+						nextStep();
+					}
+				);
+			}
+
+			function nextStep() {
+				if (currentStep === 0) {
+					preloadStep();
+					return;
+				}
+				if (currentStep < steps.length) {
+					status.textContent = steps[currentStep];
+					progressFill.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
+					setTimeout(() => {
+						currentStep++;
+						if (currentStep < steps.length) {
+							nextStep();
+						} else {
+							setTimeout(() => {
+								overlay.classList.add('hidden');
+							}, 500);
+						}
+					}, 800);
+				}
+			}
+
+			setTimeout(nextStep, 500);
+		}
 
         // Enhanced particle system
         function createParticles() {
