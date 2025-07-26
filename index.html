@@ -2022,7 +2022,11 @@
                         allDone = false;
                     }
                 }
-                updateDisplay(display);
+				// Pad display string to target length just in case (8 characters, including '.')
+				while (display.length < len) {
+					display += '0'; // or any digit, just not shorter
+				}
+				updateDisplay(display);
                 if (!allDone) {
                     setTimeout(step, config.flickerSpeed);
                 } else {
