@@ -1972,70 +1972,69 @@
         }
 
         // Flicker animation
-        function flickerAnimation(callback, overrideDuration = null) {
-            if (isFlickering || !config.flickerEnabled) {
-                if (callback) callback();
-                return;
-            }
-            isFlickering = true;
-            const target = formatDivergence(getCurrentDivergence());
-            const len = target.length;
-            const duration = overrideDuration || config.flickerDuration;
-            const baseTime = duration * config.flickerSpeed;
-            const maxDesync = config.flickerDesync;
-            flickerStopTimes = [];
-            for (let i = 0; i < len; i++) {
-                if (target[i] === '.') {
-                    flickerStopTimes.push(0);
-                } else {
-                    const waveOffset = (len - 1 - i) * config.flickerSpeed * config.flickerSmoothness;
-                    const randomOffset = Math.random() * maxDesync;
-                    flickerStopTimes.push(baseTime + waveOffset + randomOffset);
-                }
-            }
-            let elapsed = 0;
-            const digitHistory = new Array(len).fill(null).map(() => []);
-            const availableDigits = new Array(len).fill(null).map(() => [0,1,2,3,4,5,6,7,8,9]);
-            function step() {
-                elapsed += config.flickerSpeed;
-                let display = '';
-                let allDone = true;
-                for (let i = 0; i < len; i++) {
-                    const ch = target[i];
-                    if (ch === '.' || elapsed >= flickerStopTimes[i]) {
-                        display += ch;
-                    } else {
-                        let newDigit;
-                        if (availableDigits[i].length === 0) {
-                            availableDigits[i] = [0,1,2,3,4,5,6,7,8,9];
-                            if (digitHistory[i].length > 2) {
-                                const recentDigits = digitHistory[i].slice(-2);
-                                availableDigits[i] = availableDigits[i].filter(d => !recentDigits.includes(d));
-                            }
-                        }
-                        const randomIndex = Math.floor(Math.random() * availableDigits[i].length);
-                        newDigit = availableDigits[i][randomIndex];
-                        availableDigits[i] = availableDigits[i].filter(d => d !== newDigit);
-                        digitHistory[i].push(newDigit);
-                        if (digitHistory[i].length > 3) digitHistory[i].shift();
-                        display += newDigit.toString();
-                        allDone = false;
-                    }
-                }
-				// Pad display string to target length just in case (8 characters, including '.')
-				while (display.length < len) {
-					display += '0'; // or any digit, just not shorter
+		function flickerAnimation(callback, overrideDuration = null) {
+			if (isFlickering || !config.flickerEnabled) {
+				if (callback) callback();
+				return;
+			}
+			isFlickering = true;
+			const target = formatDivergence(getCurrentDivergence());
+			const len = target.length;
+			const duration = overrideDuration || config.flickerDuration;
+			const baseTime = duration * config.flickerSpeed;
+			const maxDesync = config.flickerDesync;
+			flickerStopTimes = [];
+			for (let i = 0; i < len; i++) {
+				if (target[i] === '.') {
+					flickerStopTimes.push(0);
+				} else {
+					const waveOffset = (len - 1 - i) * config.flickerSpeed * config.flickerSmoothness;
+					const randomOffset = Math.random() * maxDesync;
+					flickerStopTimes.push(baseTime + waveOffset + randomOffset);
 				}
+			}
+			let elapsed = 0;
+			const digitHistory = new Array(len).fill(null).map(() => []);
+			const availableDigits = new Array(len).fill(null).map(() => [0,1,2,3,4,5,6,7,8,9]);
+			function step() {
+				elapsed += config.flickerSpeed;
+				let display = '';
+				let allDone = true;
+				for (let i = 0; i < len; i++) {
+					const ch = target[i];
+					if (ch === '.' || elapsed >= flickerStopTimes[i]) {
+						display += ch;
+					} else {
+						let newDigit;
+						// Make sure we don't repeat recent digits too often
+						if (availableDigits[i].length === 0) {
+							availableDigits[i] = [0,1,2,3,4,5,6,7,8,9];
+							if (digitHistory[i].length > 2) {
+								const recentDigits = digitHistory[i].slice(-2);
+								availableDigits[i] = availableDigits[i].filter(d => !recentDigits.includes(d));
+							}
+						}
+						const randomIndex = Math.floor(Math.random() * availableDigits[i].length);
+						newDigit = availableDigits[i][randomIndex];
+						availableDigits[i] = availableDigits[i].filter(d => d !== newDigit);
+						digitHistory[i].push(newDigit);
+						if (digitHistory[i].length > 3) digitHistory[i].shift();
+						display += newDigit.toString();
+						allDone = false;
+					}
+				}
+				// Do NOT pad here: display will always be length == len because the loop above always runs i=0..len-1
 				updateDisplay(display);
-                if (!allDone) {
-                    setTimeout(step, config.flickerSpeed);
-                } else {
-                    isFlickering = false;
-                    setTimeout(() => { updateDisplay(); if (callback) callback(); }, config.flickerSpeed);
-                }
-            }
-            step();
-        }
+				if (!allDone) {
+					setTimeout(step, config.flickerSpeed);
+				} else {
+					isFlickering = false;
+					setTimeout(() => { updateDisplay(); if (callback) callback(); }, config.flickerSpeed);
+				}
+			}
+			step();
+		}
+
 
         // Show dialogue with sprites
         function showDialogue() {
