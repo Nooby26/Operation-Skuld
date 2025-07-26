@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Steins;Gate Divergence Meter - Visual Novel Counter</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Orbitron:wght@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Orbitron:wght@700&family=Courier+New&display=swap');
 
         :root {
             --primary-color: #ff6000;
@@ -14,6 +14,7 @@
             --panel-bg: rgba(10, 5, 0, 0.9);
             --border-color: #ff8033;
             --font-main: 'VT323', 'Lucida Console', monospace;
+            --font-cmd: 'VT323', 'Share Tech Mono', 'Courier New', monospace;
         }
 
         body, html {
@@ -23,57 +24,255 @@
             font-family: var(--font-main);
             color: var(--primary-color);
             overflow: hidden;
+            position: relative;
         }
 
-        .master-container {
-            display: flex;
+        .main-container {
             height: 100vh;
-            background: radial-gradient(ellipse at 50% 30%, #2a1500 0%, #000000 80%);
-            transition: all 0.3s ease;
-        }
-
-        .left-panel, .right-panel {
-            padding: 25px;
-            box-sizing: border-box;
-            height: 100%;
-        }
-
-        .left-panel {
-            flex-basis: 65%;
+            background: #000;
             display: flex;
             flex-direction: column;
+            position: relative;
+        }
+
+        /* Background image support */
+        .main-container.has-background {
+            background-image: url('background.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* Background glow overlay - OFF by default */
+        .background-glow-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at 50% 30%, #2a1500 0%, #000000 80%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .background-glow-overlay.active {
+            opacity: 1;
+        }
+
+        /* AMADEUS-STYLE INITIALIZATION OVERLAY */
+        .initialization-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            display: flex;
             align-items: center;
             justify-content: center;
-            transition: flex-basis 0.3s ease;
-            overflow-y: auto;
+            flex-direction: column;
+            opacity: 1;
+            transition: opacity 0.5s ease;
         }
 
-        .master-container.sidebar-collapsed .left-panel {
-            flex-basis: 100%;
+        .initialization-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
 
-        .right-panel {
-            flex-basis: 35%;
-            background: var(--panel-bg);
-            border-left: 2px solid var(--border-color);
-            box-shadow: -10px 0 25px rgba(255, 102, 0, 0.2);
-            transition: all 0.3s ease;
-            overflow-y: auto;
-            overflow-x: hidden;
+        .init-text {
+            font-family: 'Orbitron', monospace;
+            color: var(--primary-color);
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--primary-color);
         }
 
-        .master-container.sidebar-collapsed .right-panel {
-            flex-basis: 0%;
-            min-width: 0;
-            padding: 0;
-            border-left: none;
-            box-shadow: none;
+        .init-progress {
+            width: 300px;
+            height: 4px;
+            background: rgba(255, 96, 0, 0.3);
+            border: 1px solid var(--primary-color);
             overflow: hidden;
+            margin-bottom: 15px;
         }
 
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: var(--dark-bg); }
-        ::-webkit-scrollbar-thumb { background: var(--border-color); }
+        .init-progress-fill {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 8px var(--primary-color);
+        }
+
+        .init-status {
+            font-family: var(--font-main);
+            color: var(--secondary-color);
+            font-size: 16px;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        /* CMD-STYLE STATUS ELEMENTS */
+        .cmd-status-route {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-family: var(--font-cmd);
+            color: #ffffff;
+            font-size: 16px;
+            z-index: 300;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .cmd-status-worldline {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-family: var(--font-cmd);
+            color: #ffffff;
+            font-size: 16px;
+            z-index: 300;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .cmd-status-progress {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            font-family: var(--font-cmd);
+            color: #ffffff;
+            font-size: 14px;
+            z-index: 300;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        /* BOTTOM RIGHT BUTTON CLUSTER */
+        .bottom-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 1px;
+            z-index: 400;
+        }
+
+        .mini-button {
+            width: 20px;
+            height: 20px;
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            font-family: var(--font-main);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            text-shadow: 0 0 3px var(--primary-color);
+            border-radius: 2px;
+        }
+
+        .mini-button:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 8px var(--primary-color);
+            background: rgba(255, 96, 0, 0.1);
+        }
+
+        /* SCANNING LINES ANIMATION */
+        .scanning-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.3;
+        }
+
+        .scanning-lines::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+            animation: scanDown 4s linear infinite;
+            opacity: 0.6;
+        }
+
+        .scanning-lines::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(180deg, transparent, var(--primary-color), transparent);
+            animation: scanRight 6s linear infinite;
+            opacity: 0.4;
+        }
+
+        @keyframes scanDown {
+            0% { top: -2px; }
+            100% { top: 100%; }
+        }
+
+        @keyframes scanRight {
+            0% { left: -2px; }
+            100% { left: 100%; }
+        }
+
+        /* PARTICLE EFFECTS */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0.4;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--secondary-color);
+            border-radius: 50%;
+            animation: float 8s linear infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) translateX(0px); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10px) translateX(50px); opacity: 0; }
+        }
+
+        /* MAIN CONTENT AREA - ADJUSTABLE POSITIONING */
+        .content-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 20px;
+            z-index: 2;
+            position: relative;
+        }
 
         .divergence-display {
             display: flex;
@@ -81,16 +280,14 @@
             justify-content: center;
             margin-bottom: 40px;
             min-height: 150px;
+            position: relative;
+            transition: all 0.3s ease;
         }
         
         .divergence-display img {
             height: 130px;
             margin: 0 1px;
             transition: height 0.3s ease;
-        }
-        
-        .divergence-display .percentage-symbol {
-            margin-left: 8px;
         }
 
         .fallback-digit {
@@ -109,122 +306,144 @@
             text-shadow: 0 0 10px var(--primary-color);
         }
 
-        .controls { text-align: center; }
-        .control-row { display: flex; gap: 15px; justify-content: center; }
-        
-        button {
-            background: transparent;
-            border: 2px solid var(--primary-color);
-            color: var(--primary-color);
-            padding: 12px 25px;
-            cursor: pointer;
-            font-family: var(--font-main);
-            font-size: 20px;
-            text-shadow: 0 0 8px var(--primary-color);
-            transition: all 0.3s;
-            position: relative;
-            border-radius: 3px;
-        }
-        
-        button:hover {
-            background: var(--primary-color);
-            color: #000;
-            text-shadow: none;
-            box-shadow: 0 0 15px var(--primary-color);
+        /* IMPROVED DIALOGUE BOX WITH SPRITE ALIGNMENT FIX */
+        #dialogueBox {
+            position: fixed;
+            bottom: 40px;
+            left: 5%;
+            width: 55%;
+            height: 80px;
+            background: rgba(10, 5, 0, 0.95);
+            border: 2px solid var(--border-color);
+            padding: 12px 15px;
+            font-size: 18px;
+            z-index: 200;
+            opacity: 0;
+            transition: all 0.5s ease;
+            pointer-events: none;
+            box-shadow: 0 0 8px var(--primary-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            overflow: visible;
         }
 
-        .info-panel, .settings-panel {
-            padding: 10px;
-            text-align: center;
-            width: 100%;
+        #dialogueBox.with-sprites {
+            width: 80%;
         }
 
-        .info-panel h3 {
-            font-size: 28px;
+        #dialogueBox.visible {
+            opacity: 1;
+        }
+
+        .dialogue-char {
+            font-weight: bold;
             color: var(--secondary-color);
-            text-shadow: 0 0 5px var(--secondary-color);
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+            margin-right: 4px;
         }
 
-        .settings-panel h3 {
+        .dialogue-text-container {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            line-height: 1.1;
+            display: flex;
+            align-items: center;
+        }
+
+        .character-sprite {
+            width: auto;
+            max-width: 250px;
+            height: auto;
+            max-height: none;
+            margin-left: 15px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            flex-shrink: 0;
+            align-self: flex-end;
+            position: relative;
+            bottom: 0px; /* Will be adjustable via settings */
+        }
+
+        .character-sprite.visible {
+            opacity: 1;
+        }
+
+        /* DIALOGUE BOX POSITION VARIANTS */
+        #dialogueBox.position-bottom-left {
+            bottom: 40px; left: 5%; width: 55%;
+        }
+        #dialogueBox.position-bottom-left.with-sprites {
+            width: 80%;
+        }
+        #dialogueBox.position-bottom-center {
+            bottom: 40px; left: 50%; width: 55%;
+            transform: translateX(-50%);
+        }
+        #dialogueBox.position-bottom-center.with-sprites {
+            width: 80%;
+        }
+        #dialogueBox.position-bottom-right {
+            bottom: 40px; right: 5%; width: 55%;
+            left: auto;
+        }
+        #dialogueBox.position-bottom-right.with-sprites {
+            width: 80%;
+        }
+        #dialogueBox.position-center {
+            top: 50%; left: 50%; width: 55%;
+            transform: translate(-50%, -50%);
+            bottom: auto;
+        }
+        #dialogueBox.position-center.with-sprites {
+            width: 80%;
+        }
+        #dialogueBox.position-top-center {
+            top: 40px; left: 50%; width: 55%;
+            transform: translateX(-50%);
+            bottom: auto;
+        }
+        #dialogueBox.position-top-center.with-sprites {
+            width: 80%;
+        }
+
+        /* BOTTOM SLIDING SETTINGS DRAWER */
+        .settings-drawer {
+            position: fixed;
+            bottom: -90vh;
+            left: 0;
+            right: 0;
+            height: 90vh;
+            background: var(--panel-bg);
+            border-top: 2px solid var(--border-color);
+            box-shadow: 0 -10px 25px rgba(255, 102, 0, 0.3);
+            z-index: 500;
+            transition: bottom 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .settings-drawer.active {
+            bottom: 0;
+        }
+
+        .settings-drawer h3 {
             font-size: 28px;
             color: #ff8033;
             text-shadow: 0 0 5px #ff8033;
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 10px;
             margin-bottom: 20px;
-        }
-        
-        .worldline-info {
-            margin: 15px 0; font-size: 20px;
-            letter-spacing: 1px;
-        }
-        
-        .progress-bar {
-            width: 90%; height: 25px; background: #000;
-            border: 2px solid var(--primary-color);
-            margin: 15px auto; overflow: hidden;
-            box-shadow: inset 0 0 8px #000;
-            border-radius: 3px;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-            box-shadow: 0 0 15px var(--primary-color);
-            transition: width 0.5s ease;
-        }
-        
-        select, input[type="number"] {
-            background: var(--dark-bg);
-            border: 2px solid var(--primary-color);
-            color: var(--primary-color);
-            padding: 8px 12px;
-            font-family: var(--font-main);
-            font-size: 18px;
-            width: 100%;
-            box-sizing: border-box;
-            border-radius: 3px;
+            text-align: center;
         }
 
-        input[type="range"] {
-            -webkit-appearance: none; appearance: none;
-            width: 100%; height: 5px; background: var(--primary-color);
-            outline: none; border-radius: 3px;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 25px; height: 25px; background: var(--secondary-color);
-            cursor: pointer; border: 3px solid var(--dark-bg);
-            box-shadow: 0 0 10px var(--secondary-color);
-            border-radius: 50%;
-        }
-
-        input[type="checkbox"] {
-            width: 20px; height: 20px;
-            accent-color: var(--primary-color);
-            margin-right: 8px;
-        }
-
-        textarea {
-            background: var(--dark-bg);
-            border: 2px solid var(--primary-color);
-            color: var(--primary-color);
-            padding: 10px;
-            font-family: var(--font-main);
-            font-size: 16px;
-            width: 100%;
-            box-sizing: border-box;
-            border-radius: 3px;
-            resize: vertical;
-            min-height: 120px;
-        }
-
-        textarea::placeholder {
-            color: #ff9d0070;
-            font-style: italic;
+        .settings-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
         }
 
         .settings-group {
@@ -276,34 +495,55 @@
             font-size: 14px;
         }
 
-        .preset-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
+        /* FORM ELEMENTS STYLING */
+        select, input[type="number"] {
+            background: var(--dark-bg);
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 8px 12px;
+            font-family: var(--font-main);
+            font-size: 18px;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 3px;
         }
 
-        .preset-buttons button {
-            padding: 8px 15px;
-            font-size: 14px;
-            border-radius: 5px;
-            min-width: 80px;
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 5px; background: var(--primary-color);
+            outline: none; border-radius: 3px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 25px; height: 25px; background: var(--secondary-color);
+            cursor: pointer; border: 3px solid var(--dark-bg);
+            box-shadow: 0 0 10px var(--secondary-color);
+            border-radius: 50%;
         }
 
-        .save-settings-button {
-            background: var(--secondary-color) !important;
-            color: #000 !important;
-            font-weight: bold;
-            font-size: 18px !important;
-            padding: 15px 30px !important;
-            margin: 20px 0;
-            box-shadow: 0 0 15px var(--secondary-color);
-            text-shadow: none !important;
+        input[type="checkbox"] {
+            width: 20px; height: 20px;
+            accent-color: var(--primary-color);
+            margin-right: 8px;
         }
 
-        .save-settings-button:hover {
-            background: var(--primary-color) !important;
-            box-shadow: 0 0 20px var(--primary-color);
+        textarea {
+            background: var(--dark-bg);
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px;
+            font-family: var(--font-main);
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 3px;
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        textarea::placeholder {
+            color: #ff9d0070;
+            font-style: italic;
         }
 
         .dialogue-editor {
@@ -353,81 +593,53 @@
             line-height: 1.3;
         }
 
-        .settings-panel {
-            max-height: 0;
-            overflow: hidden;
-            padding-top: 0;
-            padding-bottom: 0;
-            margin-top: 0;
-            transition: max-height 0.5s ease-out, padding 0.5s ease-out, margin 0.5s ease-out;
-        }
-        .settings-panel.active {
-            max-height: 3000px;
-            padding-top: 10px;
-            padding-bottom: 10px;
-            margin-top: 20px;
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
-        #dialogueBox {
-            position: fixed;
-            bottom: 40px; left: 5%; width: 60%;
-            background: rgba(10, 5, 0, 0.95);
-            border: 2px solid var(--border-color);
-            padding: 20px; font-size: 24px;
-            z-index: 200;
-            opacity: 0;
-            transition: all 0.5s ease;
-            pointer-events: none;
-            box-shadow: 0 0 20px rgba(255, 102, 0, 0.3);
-            border-radius: 8px;
-        }
-        #dialogueBox.visible { opacity: 1; }
-        .dialogue-char { font-weight: bold; color: var(--secondary-color); }
-
-        #dialogueBox.position-bottom-left {
-            bottom: 40px; left: 5%; width: 60%;
-        }
-        #dialogueBox.position-bottom-center {
-            bottom: 40px; left: 50%; width: 60%;
-            transform: translateX(-50%);
-        }
-        #dialogueBox.position-bottom-right {
-            bottom: 40px; right: 5%; width: 60%;
-            left: auto;
-        }
-        #dialogueBox.position-center {
-            top: 50%; left: 50%; width: 60%;
-            transform: translate(-50%, -50%);
-            bottom: auto;
-        }
-        #dialogueBox.position-top-center {
-            top: 40px; left: 50%; width: 60%;
-            transform: translateX(-50%);
-            bottom: auto;
-        }
-
-        .help-text {
-            color: #ff9d00;
+        .preset-buttons button {
+            padding: 8px 15px;
             font-size: 14px;
-            line-height: 1.4;
-            white-space: pre-line;
+            border-radius: 5px;
+            min-width: 80px;
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            cursor: pointer;
+            font-family: var(--font-main);
+            transition: all 0.3s;
         }
 
-        .tooltip {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--panel-bg);
-            border: 2px solid var(--border-color);
-            padding: 10px 15px;
-            border-radius: 5px;
-            color: var(--secondary-color);
-            font-size: 16px;
-            z-index: 300;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+        .preset-buttons button:hover {
+            background: var(--primary-color);
+            color: #000;
+            box-shadow: 0 0 15px var(--primary-color);
         }
-        .tooltip.visible { opacity: 1; }
+
+        .save-settings-button {
+            background: var(--secondary-color) !important;
+            color: #000 !important;
+            font-weight: bold;
+            font-size: 18px !important;
+            padding: 15px 30px !important;
+            margin: 20px auto;
+            display: block;
+            box-shadow: 0 0 15px var(--secondary-color);
+            text-shadow: none !important;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: var(--font-main);
+            transition: all 0.3s;
+        }
+
+        .save-settings-button:hover {
+            background: var(--primary-color) !important;
+            box-shadow: 0 0 20px var(--primary-color);
+        }
 
         .settings-note {
             background: rgba(255, 102, 0, 0.1);
@@ -439,39 +651,110 @@
             color: var(--secondary-color);
             text-align: center;
         }
+
+        .tooltip {
+            position: fixed;
+            top: 20px;
+            right: 120px;
+            background: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            padding: 10px 15px;
+            border-radius: 5px;
+            color: var(--secondary-color);
+            font-size: 16px;
+            z-index: 600;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            max-width: 300px;
+        }
+        .tooltip.visible { opacity: 1; }
+
+        .help-text {
+            color: #ff9d00;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-line;
+        }
+
+        /* RESPONSIVE ADJUSTMENTS */
+        @media (max-width: 768px) {
+            .cmd-status-route, .cmd-status-worldline, .cmd-status-progress {
+                font-size: 14px;
+            }
+            
+            .settings-content {
+                grid-template-columns: 1fr;
+            }
+            
+            #dialogueBox {
+                left: 3%;
+                width: 60%;
+            }
+            
+            #dialogueBox.with-sprites {
+                width: 85%;
+            }
+            
+            .mini-button {
+                width: 18px;
+                height: 18px;
+                font-size: 11px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="master-container" id="masterContainer">
-        <div class="left-panel">
-            <div class="divergence-display" id="divergenceDisplay"></div>
-            <div class="controls">
-                <div class="control-row">
-                    <button onclick="incrementStreak()">Productive Day (+1)</button>
-                    <button onclick="resetStreak()">Reset Worldline</button>
-                    <button onclick="toggleSettings()">Toggle Config (S)</button>
-                </div>
+    <div class="main-container" id="mainContainer">
+        <!-- Initialization Overlay -->
+        <div class="initialization-overlay" id="initializationOverlay">
+            <div class="init-text">AMADEUS SYSTEM</div>
+            <div class="init-progress">
+                <div class="init-progress-fill" id="initProgressFill"></div>
             </div>
-            <div id="dialogueBox" class="position-bottom-left"></div>
+            <div class="init-status" id="initStatus">Initializing...</div>
         </div>
 
-        <div class="right-panel">
-            <div class="info-panel">
-                <h3>Lab Status</h3>
-                <div class="worldline-info"><strong>Worldline:</strong> <span id="currentWorldline">Loading...</span></div>
-                <div class="worldline-info"><strong>Route:</strong> <span id="currentRoute">Calculating...</span></div>
-                <div class="worldline-info"><strong>Target:</strong> Steins Gate (1.048596)</div>
-                <div class="worldline-info"><strong>Progress:</strong></div>
-                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-                <div class="worldline-info"><strong>Streak:</strong> <span id="streakDays">0</span> / <span id="totalDays">50</span> Days</div>
+        <!-- Background glow overlay -->
+        <div class="background-glow-overlay" id="backgroundGlowOverlay"></div>
+        
+        <!-- Scanning Lines Effect -->
+        <div class="scanning-lines" id="scanningLines"></div>
+        
+        <!-- Particle Effects -->
+        <div class="particles" id="particles"></div>
+        
+        <!-- CMD-STYLE STATUS ELEMENTS -->
+        <div class="cmd-status-route" id="cmdStatusRoute">Route: Loading...</div>
+        <div class="cmd-status-worldline" id="cmdStatusWorldline">Worldline: Loading... | Target: 1.048596</div>
+        <div class="cmd-status-progress" id="cmdStatusProgress">Progress: 0/50 Days</div>
+        
+        <!-- BOTTOM RIGHT MINI BUTTONS -->
+        <div class="bottom-buttons">
+            <button class="mini-button" onclick="incrementStreak()" title="Productive Day (+1)">W</button>
+            <button class="mini-button" onclick="resetStreak()" title="Reset Worldline">R</button>
+            <button class="mini-button" onclick="toggleSettings()" title="Open Settings">S</button>
+        </div>
+
+        <!-- MAIN CONTENT AREA -->
+        <div class="content-area">
+            <div class="divergence-display" id="divergenceDisplay"></div>
+        </div>
+
+        <!-- IMPROVED DIALOGUE BOX -->
+        <div id="dialogueBox" class="position-bottom-left">
+            <div class="dialogue-text-container"></div>
+            <img class="character-sprite" id="characterSprite" style="display: none;" alt="Character Sprite">
+        </div>
+
+        <!-- BOTTOM SLIDING SETTINGS DRAWER -->
+        <div class="settings-drawer" id="settingsDrawer">
+            <h3>SYSTEM CONFIGURATION</h3>
+            
+            <div class="settings-note">
+                ⚠️ Changes only take effect after clicking "Save Settings"
             </div>
-            <div class="settings-panel" id="settingsPanel">
-                <h3>System Config</h3>
-                
-                <div class="settings-note">
-                    ⚠️ Changes only take effect after clicking "Save Settings"
-                </div>
-                
+            
+            <div class="settings-content">
                 <div class="settings-group">
                     <h4>Display Settings</h4>
                     <div class="setting-item">
@@ -479,8 +762,125 @@
                         <input type="range" id="meterSizeInput" min="80" max="400" value="130" oninput="updateValueDisplays()">
                         <span class="value-display" id="meterSizeValue">130px</span>
                     </div>
+                    <div class="setting-item">
+                        <label>Meter Horizontal Position:</label>
+                        <input type="range" id="meterHorizontalInput" min="-200" max="200" value="0" oninput="updateValueDisplays()">
+                        <span class="value-display" id="meterHorizontalValue">0px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Meter Vertical Position:</label>
+                        <input type="range" id="meterVerticalInput" min="-200" max="200" value="0" oninput="updateValueDisplays()">
+                        <span class="value-display" id="meterVerticalValue">0px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Background Glow:</label>
+                        <input type="checkbox" id="backgroundGlowInput">
+                        <span>Radial background gradient</span>
+                    </div>
                 </div>
                 
+                <div class="settings-group">
+                    <h4>CMD Status Text Settings</h4>
+                    <div class="setting-item">
+                        <label>Route Text Horizontal Position:</label>
+                        <input type="range" id="routeHorizontalInput" min="0" max="300" value="20" oninput="updateValueDisplays()">
+                        <span class="value-display" id="routeHorizontalValue">20px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Route Text Vertical Position:</label>
+                        <input type="range" id="routeVerticalInput" min="0" max="200" value="20" oninput="updateValueDisplays()">
+                        <span class="value-display" id="routeVerticalValue">20px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Route Text Size:</label>
+                        <input type="range" id="routeSizeInput" min="12" max="24" value="16" oninput="updateValueDisplays()">
+                        <span class="value-display" id="routeSizeValue">16px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Worldline Text Horizontal Position:</label>
+                        <input type="range" id="worldlineHorizontalInput" min="0" max="300" value="20" oninput="updateValueDisplays()">
+                        <span class="value-display" id="worldlineHorizontalValue">20px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Worldline Text Vertical Position:</label>
+                        <input type="range" id="worldlineVerticalInput" min="0" max="200" value="20" oninput="updateValueDisplays()">
+                        <span class="value-display" id="worldlineVerticalValue">20px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Worldline Text Size:</label>
+                        <input type="range" id="worldlineSizeInput" min="12" max="24" value="16" oninput="updateValueDisplays()">
+                        <span class="value-display" id="worldlineSizeValue">16px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Progress Text Size:</label>
+                        <input type="range" id="progressSizeInput" min="10" max="20" value="14" oninput="updateValueDisplays()">
+                        <span class="value-display" id="progressSizeValue">14px</span>
+                    </div>
+                </div>
+                    <div class="setting-item">
+                        <label>Progress Text Horizontal Position:</label>
+                        <input type="range" id="progressHorizontalInput" min="0" max="300" value="20" oninput="updateValueDisplays()">
+                        <span class="value-display" id="progressHorizontalValue">20px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Progress Text Vertical Position:</label>
+                        <input type="range" id="progressVerticalInput" min="0" max="200" value="80" oninput="updateValueDisplays()">
+                        <span class="value-display" id="progressVerticalValue">80px</span>
+                    </div>
+                
+                <div class="settings-group">
+                    <h4>Visual Effects</h4>
+                    <div class="setting-item">
+                        <label>Initialization Animation:</label>
+                        <input type="checkbox" id="initAnimationInput" checked>
+                        <span>AMADEUS-style startup</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Scanning Lines:</label>
+                        <input type="checkbox" id="scanningLinesInput" checked>
+                        <span>Retro CRT effect</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Particle Effects:</label>
+                        <input type="checkbox" id="particleEffectsInput" checked>
+                        <span>Floating particles</span>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <h4>Interface Settings</h4>
+                    <div class="setting-item">
+                        <label>Dialogue Position:</label>
+                        <select id="dialoguePositionSelect">
+                            <option value="bottom-left">Bottom Left</option>
+                            <option value="bottom-center">Bottom Center</option>
+                            <option value="bottom-right">Bottom Right</option>
+                            <option value="center">Screen Center</option>
+                            <option value="top-center">Top Center</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Dialogue Line Spacing:</label>
+                        <input type="range" id="dialogueLineSpacingInput" min="1.0" max="2.0" step="0.1" value="1.1" oninput="updateValueDisplays()">
+                        <span class="value-display" id="dialogueLineSpacingValue">1.1</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Sprite Vertical Offset:</label>
+                        <input type="range" id="spriteOffsetInput" min="-20" max="20" value="0" oninput="updateValueDisplays()">
+                        <span class="value-display" id="spriteOffsetValue">0px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Auto-hide Dialogue:</label>
+                        <input type="checkbox" id="autoHideDialogue" checked>
+                        <span>Hide after 5 seconds</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Enable Character Sprites:</label>
+                        <input type="checkbox" id="enableSprites" checked>
+                        <span>Show visual novel style sprites</span>
+                    </div>
+                </div>
+
                 <div class="settings-group">
                     <h4>Audio Settings</h4>
                     <div class="setting-item">
@@ -552,25 +952,6 @@
                         </select>
                     </div>
                 </div>
-                
-                <div class="settings-group">
-                    <h4>Interface Settings</h4>
-                    <div class="setting-item">
-                        <label>Dialogue Position:</label>
-                        <select id="dialoguePositionSelect">
-                            <option value="bottom-left">Bottom Left</option>
-                            <option value="bottom-center">Bottom Center</option>
-                            <option value="bottom-right">Bottom Right</option>
-                            <option value="center">Screen Center</option>
-                            <option value="top-center">Top Center</option>
-                        </select>
-                    </div>
-                    <div class="setting-item">
-                        <label>Auto-hide Dialogue:</label>
-                        <input type="checkbox" id="autoHideDialogue" checked>
-                        <span>Hide after 5 seconds</span>
-                    </div>
-                </div>
 
                 <div class="settings-group">
                     <h4>Custom Dialogue Editor</h4>
@@ -619,11 +1000,11 @@
                         <button onclick="applyPreset('cinematic')">Cinematic</button>
                     </div>
                 </div>
-
-                <button class="save-settings-button" onclick="saveSettings()">
-                    💾 Save Settings
-                </button>
             </div>
+
+            <button class="save-settings-button" onclick="saveSettings()">
+                💾 Save Settings
+            </button>
         </div>
     </div>
 
@@ -637,49 +1018,92 @@
     <script>
         // Global variables
         let config = {
-            startValue: 0.523299, 
-            totalDays: 100, 
-            meterSize: 260,
+            startValue: 0.571046, 
+            totalDays: 30, 
+            meterSize: 310,
+            meterHorizontal: 0,
+            meterVertical: 0,
+            spriteOffset: -12,
+            routeHorizontal: 10,
+            routeVertical: 10,
+            routeSize: 16,
+            worldlineHorizontal: 10,
+            worldlineVertical: 10,
+            worldlineSize: 16,
+            progressSize: 14,
+            progressHorizontal: 7,
+            progressVertical: 42,
             flickerEnabled: true,
             flickerSpeed: 17,
             flickerDuration: 94,
-            flickerDesync: 300,
-            flickerSmoothness: 4,
+            flickerDesync: 250,
+            flickerSmoothness: 3,
             dialoguePosition: 'bottom-left',
+            dialogueLineSpacing: 1.1,
             autoHideDialogue: true,
             soundEnabled: true,
             soundVolume: 70,
             soundLeadMs: 500,
             matchFlickerToSound: true,
-            dialogueTimeline: 'alpha', // 'alpha' or 'beta'
+            dialogueTimeline: 'alpha',
+            enableSprites: true,
+            backgroundGlow: false, // OFF by default
+            initAnimation: true,
+            scanningLines: true,
+            particleEffects: true,
             customDialogues: {
                 intro: [], early: [], mid: [], late: [], final: []
             }
         };
         
         const STEINS_GATE_TARGET = 1.048596;
-        let sidebarCollapsed = false;
         let streakSound = null;
-        
-        const timelines = {
-            alpha: [
-                { name: "Chaos-Theory Homeostasis", value: 0.571046 },
-                { name: "Butterfly Effect's Divergence", value: 0.571024 },
-                { name: "Metaphysical Necrosis", value: 0.523299 },
-                { name: "Interpreter Rendezvous", value: 0.456903 },
-                { name: "Made in Complex", value: 0.337187 },
-                { name: "Fractal Androgyne", value: 0.409420 },
-                { name: "Dogma in Event Horizon", value: 0.409431 }
-            ],
-            beta: [
-                { name: "Gehenna's Stigma", value: 1.129848 },
-                { name: "Promised Rinascimento", value: 1.129954 },
-                { name: "Vega and Altair", value: 1.130205 },
-                { name: "Milky-way Crossing", value: 1.130211 },
-                { name: "Arc-light of Infinity", value: 1.130426 }
-            ]
-        };
-        
+
+        // Character sprite dimensions
+		const CHARACTER_DIMENSIONS = {
+			'okabe': {
+				alpha: { width: 459, height: 539 },
+				beta:  { width: 496, height: 539 } // <-- use your actual beta PNG size
+			},
+			'kurisu': {
+				alpha: { width: 459, height: 539 },
+				beta:  { width: 459, height: 539 }
+			},
+			'mayuri': {
+				alpha: { width: 482, height: 539 },
+				beta:  { width: 353, height: 539 }
+			},
+			'daru': {
+				alpha: { width: 645, height: 539 },
+				beta:  { width: 807, height: 539 }
+			},
+			'faris': {
+				alpha: { width: 488, height: 539 },
+				beta:  { width: 512, height: 539 }
+			},
+			'lukako': {
+				alpha: { width: 661, height: 539 },
+				beta:  { width: 303, height: 539 }
+			},
+			'suzuha': {
+				alpha: { width: 590, height: 539 },
+				beta:  { width: 344, height: 539 }
+			},
+			// Characters only present in beta timeline:
+			'amadeus': {
+				beta:  { width: 327, height: 539 }
+			},
+			'maho': {
+				beta:  { width: 507, height: 539 }
+			},
+			'futureokabe': {
+				beta:  { width: 440, height: 539 }
+			},
+			'kagari': {
+				beta:  { width: 443, height: 539 }
+			}
+		};
+
         // NEW V2 DIALOGUE LINES
         const allDialogues = {
             alpha: {
@@ -696,7 +1120,7 @@
                 early: [
                     { char: "Okabe", line: "From this moment forth, you are Lab Mem Number 004. Welcome, Christina!" },
                     { char: "Kurisu", line: "Who the hell's Christina!? My name's Kurisu!" },
-                    { char: "Mayuri", line: "Okarin! Okarin! Don't call me Okarin. I am Hououin Kyouma!" },
+                    { char: "Mayuri", line: "Look, look, Okarin! Mayushii can do it too! Ahem... 'Don't call me Okarin! I am Hououin Kyouma!' ...How was that?" },
                     { char: "Okabe", line: "How many times do I have to tell you? Don't call me Okarin." },
                     { char: "Okabe", line: "Mayuri! Bring forth the bananas! We shall turn them into gel-bananas to honor this achievement!" },
                     { char: "Okabe", line: "The PhoneWave (name subject to change) is our greatest invention! Your dedication is its primary power source!" },
@@ -868,52 +1292,369 @@
             }
         };
 
+        // Complete dialogue-to-sprite mapping - 100% accurate manual analysis
+		const dialogueToSprite = {
+			// INTRO TIER DIALOGUES
+			"So, you've arrived on this worldline. The first step is always the hardest. Let's see if you have the will to continue.": "okabe_defaultstare.png",
+			"Tuturuu~ A new lab mem? Welcome! Let's do our best together, okay? Every day is a new adventure!": "mayuri_cheering.png",
+			"I am the great mad scientist, Hououin Kyouma! My ambitions will bring chaos to the world!": "okabe_smirk.png",
+			"Supahacka on duty. You're the new variable, huh? Don't mess up my downloads.": "daru_defaultstare.png",
+			"Don't listen to him. Starting something new takes guts. Just... try not to break anything.": "kurisu_concerned.png",
+			"Your first few days are like a new Upa! So exciting! I hope you get a rare one!": "mayuri_happy.png",
+			"This must be the choice of Steins Gate. Your choice. El. Psy. Kongroo.": "okabe_smirk2.png",
+
+			// EARLY TIER DIALOGUES
+			"From this moment forth, you are Lab Mem Number 004. Welcome, Christina!": "okabe_smirk.png",
+			"Who the hell's Christina!? My name's Kurisu!": "kurisu_madashell.png",
+			"Look, look, Okarin! Mayushii can do it too! Ahem... 'Don't call me Okarin! I am Hououin Kyouma!' ...How was that?": "mayuri_happy.png",
+			"How many times do I have to tell you? Don't call me Okarin.": "okabe_angry.png",
+			"Mayuri! Bring forth the bananas! We shall turn them into gel-bananas to honor this achievement!": "okabe_smirk.png",
+			"The PhoneWave (name subject to change) is our greatest invention! Your dedication is its primary power source!": "okabe_smirk2.png",
+			"A teleporter... we've invented a teleporter! With this, and your continued effort, we can change the world!": "okabe_smirk.png",
+			"Hmph. The Organization is always watching. A single misstep, a single broken streak, and they will have won.": "okabe_angry.png",
+			"SERN... The conspiracy is deeper than I imagined. Your journey, too, must have its unseen enemies.": "okabe_defaultstare.png",
+			"This can't be! They're experimenting on people... 'Human is dead. Mismatch.' We can't let your efforts end up like this.": "kurisu_concerned.png",
+			"Stop calling me that! It's super hacker, duh. But yo, that streak count? Legit.": "daru_defaultstare.png",
+			"Could you come with me for a moment? I want to analyze your methodology. This consistency... it's not normal.": "kurisu_defaultstare.png",
+			"We need the IBN 5100. It's the key. Just as your daily commitment is the key to reaching your goal.": "okabe_defaultstare.png",
+			"Who are you calling a zombie? And you... don't you dare let your streak die either. We have work to do.": "kurisu_mad.png",
+
+			// MID TIER DIALOGUES
+			"My watch stopped... it's strange. It's like time itself is paying attention to you.": "mayuri_concerned.png",
+			"No... but... why? This can't be how it ends. Your efforts can't be for nothing.": "okabe_sad.png",
+			"The Time Leap Machine is complete. We can send our memories back in time. But you... you have to keep moving forward.": "okabe_defaultstare.png",
+			"It's happening again. I knew it would be. I let a friend die again. Don't make the same mistakes I did. Don't let go.": "okabe_sad2.png",
+			"Okabe! What's wrong with you!? ...And you, on the other side. Don't look away. This is the reality we must overcome.": "kurisu_concerned.png",
+			"I'm going back! Do it, Kurisu! Activate the machine! And you... don't you dare press that reset button.": "okabe_angryshout.png",
+			"It's no use... No matter what I do, tragedy strikes. Is your struggle this painful, too?": "okabe_sad.png",
+			"The worldline is converging... It's a fixed point. But your streak... your will... that's a force that can fight convergence.": "kurisu_determined.png",
+			"I'll try again. And again. Just like you, every single day. We will not give up!": "okabe_angry.png",
+			"I saw it... I saw it happen again... and again... I know it's hard. But you have to keep going. Your streak... it's our only hope.": "okabe_hesitant.png",
+			"Stop it, Okabe! You can't keep doing this to yourself! ...And you. Don't let his despair infect you. We need you to be strong.": "kurisu_concerned.png",
+			"Okarin... chill. This is getting too heavy, man. But you, user... you're the one constant in all this chaos. Don't waver.": "daru_defaultstare.png",
+			"How can I be calm!? It's my fault! My experiments... that's what caused all this! Don't let a single moment of weakness erase all your progress!": "okabe_angryshout.png",
+			"You have to find a way to break the loop. There must be a flaw in the convergence. Your path is simpler. Just... don't stop.": "suzuha_defaultstare.png",
+			"Break the loop? But that means... making a choice I never thought I'd have to make. It's like resetting a streak to zero. A painful thought.": "okabe_hesitant.png",
+			"To break the rules of this worldline, a sacrifice may be needed. But if you keep your streak, you can reach a worldline where it wasn't in vain. Please.": "kurisu_determined.png",
+			"I can't... I can't make that choice!": "okabe_sad.png",
+			"You have to. To save them. It's the only way... Find the worldline where we can all exist. Your streak is the path. Find it, Okabe.": "kurisu_determined.png",
+			"It's too much for us to handle... But you seem to be handling your burden well. Keep it up.": "kurisu_feelgood.png",
+			"We may have created a monster here... But your determination is something else entirely. Something good.": "kurisu_concerned.png",
+
+			// LATE TIER DIALOGUES
+			"I'm undoing their happiness... their memories... for my own sake. I hope your journey is not as costly.": "okabe_sad.png",
+			"Even when it feels like you're in a loop, every effort matters. Don't break now. I believe in you.": "kurisu_feelgood.png",
+			"It's done. The final obstacle is removed. The path should be clearing now... because of you.": "okabe_defaultstare.png",
+			"So... this is a turning point, Okabe. But for you, it's just another step forward. Don't stop for my sake.": "kurisu_determined.png",
+			"I won't! I'll never forget! And you... you will reach the goal for us both! I promise!": "okabe_angry.png",
+			"You don't need me to be your hostage anymore... But... please don't leave me behind. Keep going.": "mayuri_concerned.png",
+			"You're fighting for the future, just like me. Don't give up on this streak! The future is counting on you!": "suzuha_defaultstare.png",
+			"A long streak is the mark of a true champion, nya! Faris is cheering for you!": "faris_happy.png",
+			"To continue for so long... you must be very strong. I admire that.": "lukako_defaultstare.png",
+			"Your streak is growing. Good. You possess the qualities of a true lab mem.": "okabe_smirk.png",
+			"You're keeping this up? Impressive. For a chuunibyou, you're surprisingly consistent.": "kurisu_feelgood.png",
+			"Okarin, can we get some Juicy Karaage Number One? To celebrate the streak!": "mayuri_happy.png",
+			"Whoa, look at that streak. You're a super-hacka at life, my dude.": "daru_defaultstare.png",
+			"Each day you succeed is another victory against the Organization! Keep this streak alive!": "okabe_smirk.png",
+			"This is the Future Gadget Laboratory. Our purpose is to shatter the System... and your presence here proves you are part of that purpose.": "okabe_smirk2.png",
+			"The loops... they've stopped. The worldline is stable, but we're not there yet. Your streak is what brought us this far. We're in the endgame now.": "okabe_defaultstare.png",
+			"The mission isn't over! We still have to make the final leap! Your dedication proves it's possible!": "suzuha_happy.png",
+			"Listen to me, my past self. And you, the observer from beyond the screen. You must not change what has already been observed.": "okabe_defaultstare.png",
+			"But... there is room for deception. Deceive yourself. Deceive the world. Your consistent effort has given us this one chance.": "okabe_smirk.png",
+			"It's insane... but it just might work. With your will powering us, how can we fail?": "okabe_smirk2.png",
+			"Let's go, Okabe Rintaro! To the final moment! And you, our silent lab mem, hold the line! We're counting on you!": "suzuha_happy.png",
+			"I failed... It's not over. As long as your streak is intact, we can try again! Don't you dare give up on me now!": "okabe_angry.png",
+			"Okarin? Don't give up. Mayushii knows you can do it. The person watching us hasn't given up, so you can't either!": "mayuri_concerned.png",
+			"Mayuri... You're right. I can't give up. For her... for everyone... for the one who has watched over us for so long.": "okabe_defaultstare.png",
+			"You've come so far. You've defied convergence. The Steins Gate is within your reach. Don't falter at the final step.": "okabe_defaultstare.png",
+			"The first D-Mail is located. Deleting this is our first real shot at changing things back. Ready?": "daru_defaultstare.png",
+
+			// FINAL TIER DIALOGUES
+			"This time... this time for sure! I will deceive the world! Your streak is the proof that the impossible can be done!": "okabe_smirk2.png",
+			"The world can be deceived. And this is the choice... of Steins Gate! Our shared choice!": "okabe_smirk.png",
+			"The divergence meter... it's changing... 1... 1.048596... Look at what you've accomplished. We've reached the Steins Gate worldline!": "okabe_smirk2.png",
+			"You could say that. My name is Okabe Rintaro. And this... this is our victory. Thank you for everything. El. Psy. Kongroo.": "okabe_smirk.png"
+		};
+
+        const timelines = {
+            alpha: [
+                { name: "Chaos-Theory Homeostasis", value: 0.571046 },
+                { name: "Butterfly Effect's Divergence", value: 0.571024 },
+                { name: "Metaphysical Necrosis", value: 0.523299 },
+                { name: "Interpreter Rendezvous", value: 0.456903 },
+                { name: "Made in Complex", value: 0.337187 },
+                { name: "Fractal Androgyne", value: 0.409420 },
+                { name: "Dogma in Event Horizon", value: 0.409431 }
+            ],
+            beta: [
+                { name: "Gehenna's Stigma", value: 1.129848 },
+                { name: "Promised Rinascimento", value: 1.129954 },
+                { name: "Vega and Altair", value: 1.130205 },
+                { name: "Milky-way Crossing", value: 1.130211 },
+                { name: "Arc-light of Infinity", value: 1.130426 }
+            ]
+        };
+
         const presets = {
             authentic: {
-                flickerSpeed: 17,
-                flickerDuration: 35,
-                flickerDesync: 300,
-                flickerSmoothness: 4,
-                meterSize: 130,
-                soundLeadMs: 500,
-                matchFlickerToSound: true
+                flickerSpeed: 17, flickerDuration: 35, flickerDesync: 300, flickerSmoothness: 4,
+                meterSize: 130, soundLeadMs: 500, matchFlickerToSound: true
             },
             smooth: {
-                flickerSpeed: 25,
-                flickerDuration: 25,
-                flickerDesync: 150,
-                flickerSmoothness: 5,
-                meterSize: 150,
-                soundLeadMs: 400,
-                matchFlickerToSound: true
+                flickerSpeed: 25, flickerDuration: 25, flickerDesync: 150, flickerSmoothness: 5,
+                meterSize: 150, soundLeadMs: 400, matchFlickerToSound: true
             },
             minimal: {
-                flickerSpeed: 50,
-                flickerDuration: 15,
-                flickerDesync: 100,
-                flickerSmoothness: 2,
-                meterSize: 100,
-                soundLeadMs: 300,
-                matchFlickerToSound: false
+                flickerSpeed: 50, flickerDuration: 15, flickerDesync: 100, flickerSmoothness: 2,
+                meterSize: 100, soundLeadMs: 300, matchFlickerToSound: false
             },
             cinematic: {
-                flickerSpeed: 15,
-                flickerDuration: 40,
-                flickerDesync: 400,
-                flickerSmoothness: 4,
-                meterSize: 160,
-                soundLeadMs: 600,
-                matchFlickerToSound: true
+                flickerSpeed: 15, flickerDuration: 40, flickerDesync: 400, flickerSmoothness: 4,
+                meterSize: 160, soundLeadMs: 600, matchFlickerToSound: true
             }
         };
 
         let streakCount = 0;
         let isFlickering = false;
         let flickerStopTimes = [];
-        let flickerElapsed = 0;
         let unusedDialogues = {};
-        let displayUpdateTimeout;
         let currentDialogueTab = 'intro';
+
+        // AMADEUS-style initialization animation
+        function runInitialization() {
+            if (!config.initAnimation) {
+                document.getElementById('initializationOverlay').classList.add('hidden');
+                return;
+            }
+
+            const overlay = document.getElementById('initializationOverlay');
+            const progressFill = document.getElementById('initProgressFill');
+            const status = document.getElementById('initStatus');
+            
+            const steps = [
+                'Loading visual novel engine...',
+                'Initializing divergence calculator...',
+                'Connecting to worldline database...',
+                'Loading character sprites...',
+                'Synchronizing timeline data...',
+                'SYSTEM READY'
+            ];
+            
+            let currentStep = 0;
+            
+            function nextStep() {
+                if (currentStep < steps.length) {
+                    status.textContent = steps[currentStep];
+                    progressFill.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
+                    
+                    setTimeout(() => {
+                        currentStep++;
+                        if (currentStep < steps.length) {
+                            nextStep();
+                        } else {
+                            setTimeout(() => {
+                                overlay.classList.add('hidden');
+                            }, 500);
+                        }
+                    }, 800);
+                }
+            }
+            
+            setTimeout(nextStep, 500);
+        }
+
+        // Enhanced particle system
+        function createParticles() {
+            if (!config.particleEffects) {
+                document.getElementById('particles').innerHTML = '';
+                return;
+            }
+
+            const particlesContainer = document.getElementById('particles');
+            particlesContainer.innerHTML = '';
+            
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 8 + 's';
+                particle.style.animationDuration = (8 + Math.random() * 4) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Check for background image and apply it
+        function checkAndApplyBackground() {
+            const img = new Image();
+            img.onload = function() {
+                document.getElementById('mainContainer').classList.add('has-background');
+                if (!config.backgroundGlow) {
+                    updateBackgroundGlow();
+                }
+            };
+            img.onerror = function() {
+                document.getElementById('mainContainer').classList.remove('has-background');
+            };
+            img.src = 'background.png';
+        }
+
+        // Update background glow
+        function updateBackgroundGlow() {
+            const glowOverlay = document.getElementById('backgroundGlowOverlay');
+            if (glowOverlay) {
+                if (config.backgroundGlow) {
+                    glowOverlay.classList.add('active');
+                } else {
+                    glowOverlay.classList.remove('active');
+                }
+            }
+        }
+
+        // Update visual effects
+        function updateVisualEffects() {
+            const scanningLines = document.getElementById('scanningLines');
+            scanningLines.style.display = config.scanningLines ? 'block' : 'none';
+            
+            createParticles();
+        }
+
+        // Update CMD status text positioning and sizing
+        function updateCmdStatusPositioning() {
+            const routeElement = document.getElementById('cmdStatusRoute');
+            const worldlineElement = document.getElementById('cmdStatusWorldline');
+            const progressElement = document.getElementById('cmdStatusProgress');
+
+            if (routeElement) {
+                routeElement.style.left = `${config.routeHorizontal}px`;
+                routeElement.style.top = `${config.routeVertical}px`;
+                routeElement.style.fontSize = `${config.routeSize}px`;
+            }
+
+            if (worldlineElement) {
+                worldlineElement.style.right = `${config.worldlineHorizontal}px`;
+                worldlineElement.style.top = `${config.worldlineVertical}px`;
+                worldlineElement.style.fontSize = `${config.worldlineSize}px`;
+            }
+
+            if (progressElement) {
+                progressElement.style.right = `${config.progressHorizontal}px`;
+                progressElement.style.bottom = `${config.progressVertical}px`;
+                progressElement.style.fontSize = `${config.progressSize}px`;
+            }
+        }
+
+        // Update sprite vertical offset
+        function updateSpriteOffset() {
+            const sprite = document.getElementById('characterSprite');
+            if (sprite) {
+                sprite.style.bottom = `${config.spriteOffset}px`;
+            }
+        }
+
+        // Update divergence meter positioning
+        function updateMeterPosition() {
+            const display = document.getElementById('divergenceDisplay');
+            if (display) {
+                display.style.transform = `translate(${config.meterHorizontal}px, ${config.meterVertical}px)`;
+            }
+        }
+
+        // Update dialogue line spacing
+        function updateDialogueLineSpacing() {
+            const textContainer = document.querySelector('.dialogue-text-container');
+            if (textContainer) {
+                textContainer.style.lineHeight = config.dialogueLineSpacing;
+            }
+        }
+
+        // Character sprite system functions
+        function analyzeDialogueEmotion(dialogue, character) {
+            const spriteName = dialogueToSprite?.[dialogue.trim()];
+            if (spriteName) {
+                return spriteName;
+            }
+            
+            const charName = character.toLowerCase();
+            const nameMapping = {
+                'amadeus kurisu': 'amadeus',
+                'future okabe': 'futureokabe',
+                'narrator': null
+            };
+            const mappedChar = nameMapping[charName] || charName;
+            
+            if (mappedChar && CHARACTER_DIMENSIONS[mappedChar]) {
+                return `${mappedChar}_defaultstare.png`;
+            }
+            
+            return null;
+        }
+
+		function getCharacterSprite(character, dialogue) {
+			const spritePath = analyzeDialogueEmotion(dialogue, character);
+			if (spritePath) {
+				return `sprites/${config.dialogueTimeline}/${spritePath}`;
+			}
+			return null;
+		}
+
+        function updateCharacterSprite(character, dialogue) {
+            if (!config.enableSprites || !character) return;
+            
+            const spritePath = getCharacterSprite(character, dialogue);
+            const spriteElement = document.getElementById('characterSprite');
+            const dialogueBox = document.getElementById('dialogueBox');
+            
+            if (!spriteElement || !dialogueBox) return;
+            
+            if (spritePath && character.toLowerCase() !== 'narrator') {
+                dialogueBox.classList.add('with-sprites');
+                
+                const charName = character.toLowerCase();
+                const nameMapping = {
+                    'amadeus kurisu': 'amadeus',
+                    'future okabe': 'futureokabe'
+                };
+                const mappedChar = nameMapping[charName] || charName;
+				const timeline = config.dialogueTimeline; // 'alpha' or 'beta'
+				let dimensions = CHARACTER_DIMENSIONS[mappedChar] && CHARACTER_DIMENSIONS[mappedChar][timeline];
+
+				if (!dimensions && CHARACTER_DIMENSIONS[mappedChar]) {
+					// fallback to alpha if beta data is missing
+					dimensions = CHARACTER_DIMENSIONS[mappedChar]['alpha'];
+				}
+
+				if (dimensions) {
+					const scaleWidth = 250 / dimensions.width;
+					const scaleHeight = 300 / dimensions.height;
+					const scale = Math.min(scaleWidth, scaleHeight, 1);
+
+					spriteElement.style.width = `${dimensions.width * scale}px`;
+					spriteElement.style.height = `${dimensions.height * scale}px`;
+				}
+                
+                spriteElement.src = spritePath;
+                spriteElement.style.display = 'block';
+                spriteElement.style.bottom = `${config.spriteOffset}px`;
+                
+				spriteElement.onerror = () => {
+					const fallbackPath = `sprites/${config.dialogueTimeline}/${mappedChar}_defaultstare.png`;
+					if (spriteElement.src !== fallbackPath) {
+						spriteElement.src = fallbackPath;
+					} else {
+						spriteElement.style.display = 'none';
+						dialogueBox.classList.remove('with-sprites');
+					}
+				};
+                
+                setTimeout(() => {
+                    spriteElement.classList.add('visible');
+                }, 100);
+            } else {
+                spriteElement.classList.remove('visible');
+                spriteElement.style.display = 'none';
+                dialogueBox.classList.remove('with-sprites');
+            }
+        }
 
         // Switch dialogue editor tabs
         function switchDialogueTab(tab) {
@@ -936,8 +1677,7 @@
             if (customDialogues && customDialogues.length > 0) {
                 return customDialogues;
             }
-            // Fallback to the selected timeline's default dialogues
-            return allDialogues[config.dialogueTimeline]?.[tier] || [];
+            return allDialogues?.[config.dialogueTimeline]?.[tier] || [];
         }
 
         // Initialize audio
@@ -985,6 +1725,19 @@
             try {
                 const valueUpdates = {
                     'meterSizeInput': { display: 'meterSizeValue', suffix: 'px' },
+                    'meterHorizontalInput': { display: 'meterHorizontalValue', suffix: 'px' },
+                    'meterVerticalInput': { display: 'meterVerticalValue', suffix: 'px' },
+                    'spriteOffsetInput': { display: 'spriteOffsetValue', suffix: 'px' },
+                    'routeHorizontalInput': { display: 'routeHorizontalValue', suffix: 'px' },
+                    'routeVerticalInput': { display: 'routeVerticalValue', suffix: 'px' },
+                    'routeSizeInput': { display: 'routeSizeValue', suffix: 'px' },
+                    'worldlineHorizontalInput': { display: 'worldlineHorizontalValue', suffix: 'px' },
+                    'worldlineVerticalInput': { display: 'worldlineVerticalValue', suffix: 'px' },
+                    'worldlineSizeInput': { display: 'worldlineSizeValue', suffix: 'px' },
+                    'progressSizeInput': { display: 'progressSizeValue', suffix: 'px' },
+                    'progressHorizontalInput': { display: 'progressHorizontalValue', suffix: 'px' },
+                    'progressVerticalInput': { display: 'progressVerticalValue', suffix: 'px' },
+                    'dialogueLineSpacingInput': { display: 'dialogueLineSpacingValue', suffix: '' },
                     'soundVolumeInput': { display: 'soundVolumeValue', suffix: '%' },
                     'soundLeadInput': { display: 'soundLeadValue', suffix: 'ms' },
                     'flickerSpeedInput': { display: 'flickerSpeedValue', suffix: 'ms' },
@@ -1002,42 +1755,64 @@
             } catch (error) { console.error('Error updating value displays:', error); }
         }
 
-        // Save all settings (main confirmation function)
+        // Save all settings WITH PROGRESS PRESERVATION
         function saveSettings() {
             try {
+                // Store current streak before saving
+                const currentStreak = streakCount;
+                
                 const inputs = {
-                    'meterSizeInput': 'meterSize', 'soundVolumeInput': 'soundVolume',
-                    'soundLeadInput': 'soundLeadMs', 'flickerSpeedInput': 'flickerSpeed',
+                    'meterSizeInput': 'meterSize', 'meterHorizontalInput': 'meterHorizontal', 'meterVerticalInput': 'meterVertical',
+                    'spriteOffsetInput': 'spriteOffset', 'routeHorizontalInput': 'routeHorizontal', 'routeVerticalInput': 'routeVertical',
+                    'routeSizeInput': 'routeSize', 'worldlineHorizontalInput': 'worldlineHorizontal', 'worldlineVerticalInput': 'worldlineVertical',
+                    'worldlineSizeInput': 'worldlineSize', 'progressSizeInput': 'progressSize', 
+                    'progressHorizontalInput': 'progressHorizontal', 'progressVerticalInput': 'progressVertical',
+                    'dialogueLineSpacingInput': 'dialogueLineSpacing',
+                    'soundVolumeInput': 'soundVolume', 'soundLeadInput': 'soundLeadMs', 'flickerSpeedInput': 'flickerSpeed',
                     'flickerDurationInput': 'flickerDuration', 'flickerDesyncInput': 'flickerDesync',
                     'flickerSmoothInput': 'flickerSmoothness', 'totalDaysInput': 'totalDays'
                 };
                 const checkboxes = {
                     'soundEnabledInput': 'soundEnabled', 'matchFlickerInput': 'matchFlickerToSound',
-                    'flickerEnabledInput': 'flickerEnabled', 'autoHideDialogue': 'autoHideDialogue'
+                    'flickerEnabledInput': 'flickerEnabled', 'autoHideDialogue': 'autoHideDialogue',
+                    'enableSprites': 'enableSprites', 'backgroundGlowInput': 'backgroundGlow',
+                    'initAnimationInput': 'initAnimation', 'scanningLinesInput': 'scanningLines',
+                    'particleEffectsInput': 'particleEffects'
                 };
                 const selects = {
                     'timelineSelect': 'startValue', 'dialoguePositionSelect': 'dialoguePosition',
                     'dialogueTimelineSelect': 'dialogueTimeline'
                 };
+                
                 Object.entries(inputs).forEach(([inputId, configKey]) => {
                     const input = document.getElementById(inputId);
-                    if (input) config[configKey] = parseInt(input.value) || config[configKey];
+                    if (input) config[configKey] = parseFloat(input.value) || config[configKey];
                 });
                 Object.entries(checkboxes).forEach(([inputId, configKey]) => {
                     const input = document.getElementById(inputId);
                     if (input) config[configKey] = input.checked;
                 });
-                Object.entries(selects).forEach(([inputId, configKey]) => {
-                    const input = document.getElementById(inputId);
-                    if (input) {
-                        if (configKey === 'startValue') {
-                            config[configKey] = parseFloat(input.value);
-                            streakCount = 0;
-                        } else {
-                            config[configKey] = input.value;
-                        }
-                    }
-                });
+                
+                // Special handling for timeline and totalDays - these reset progress
+                const timelineInput = document.getElementById('timelineSelect');
+                const totalDaysInput = document.getElementById('totalDaysInput');
+                
+                let shouldResetProgress = false;
+                if (timelineInput && parseFloat(timelineInput.value) !== config.startValue) {
+                    config.startValue = parseFloat(timelineInput.value);
+                    shouldResetProgress = true;
+                }
+                if (totalDaysInput && parseInt(totalDaysInput.value) !== config.totalDays) {
+                    config.totalDays = parseInt(totalDaysInput.value);
+                    shouldResetProgress = true;
+                }
+                
+                // Handle other selects that don't reset progress
+                const dialoguePositionInput = document.getElementById('dialoguePositionSelect');
+                const dialogueTimelineInput = document.getElementById('dialogueTimelineSelect');
+                if (dialoguePositionInput) config.dialoguePosition = dialoguePositionInput.value;
+                if (dialogueTimelineInput) config.dialogueTimeline = dialogueTimelineInput.value;
+                
                 const dialogueInputs = {
                     'customDialogueIntro': 'intro', 'customDialogueEarly': 'early', 'customDialogueMid': 'mid',
                     'customDialogueLate': 'late', 'customDialogueFinal': 'final'
@@ -1046,24 +1821,47 @@
                     const textarea = document.getElementById(inputId);
                     if (textarea) config.customDialogues[tier] = parseCustomDialogue(textarea.value);
                 });
+                
+                // Reset streak ONLY if timeline or totalDays changed
+                if (shouldResetProgress) {
+                    streakCount = 0;
+                } else {
+                    streakCount = currentStreak; // Preserve progress for all other settings
+                }
+                
                 initializeDialogues();
                 updateDialoguePosition();
+                updateDialogueLineSpacing();
+                updateSpriteOffset();
+                updateMeterPosition();
+                updateCmdStatusPositioning();
+                updateBackgroundGlow();
+                updateVisualEffects();
+                checkAndApplyBackground();
                 if (streakSound) streakSound.volume = config.soundVolume / 100;
                 updateDisplay();
-                localStorage.setItem('steinsGateStreak', JSON.stringify({ streakCount, config, sidebarCollapsed }));
-                showTooltip('Settings saved successfully! ✅', 2000);
+                localStorage.setItem('steinsGateStreak', JSON.stringify({ streakCount, config }));
+                
+                if (shouldResetProgress) {
+                    showTooltip('Settings saved! Progress reset due to timeline/days change. ⚠️', 3000);
+                } else {
+                    showTooltip('Settings saved! Progress preserved. ✅', 2000);
+                }
+                
             } catch (error) {
                 console.error('Error saving settings:', error);
                 showTooltip('Error saving settings! ❌', 2000);
             }
         }
 
-        // Initialize dialogue pools with custom or default dialogues
+        // Initialize dialogue pools
         function initializeDialogues() {
-            Object.keys(allDialogues.alpha).forEach(key => {
-                const activeDialogues = getActiveDialogues(key);
-                unusedDialogues[key] = [...activeDialogues];
-            });
+            if (allDialogues) {
+                Object.keys(allDialogues.alpha).forEach(key => {
+                    const activeDialogues = getActiveDialogues(key);
+                    unusedDialogues[key] = [...activeDialogues];
+                });
+            }
         }
 
         // Populate timeline dropdown
@@ -1079,18 +1877,6 @@
                     select.appendChild(option);
                 });
             } catch (error) { console.error('Error populating timelines:', error); }
-        }
-
-        // Toggle sidebar
-        function toggleSidebar() {
-            try {
-                const masterContainer = document.getElementById('masterContainer');
-                if (masterContainer) {
-                    sidebarCollapsed = !sidebarCollapsed;
-                    masterContainer.classList.toggle('sidebar-collapsed', sidebarCollapsed);
-                    saveData();
-                }
-            } catch (error) { console.error('Error toggling sidebar:', error); }
         }
 
         // Update dialogue position
@@ -1112,11 +1898,6 @@
                     const data = JSON.parse(saved);
                     streakCount = data.streakCount || 0;
                     config = { ...config, ...data.config, customDialogues: { ...config.customDialogues, ...(data.config?.customDialogues || {}) } };
-                    sidebarCollapsed = data.sidebarCollapsed || false;
-                    const masterContainer = document.getElementById('masterContainer');
-                    if (masterContainer && sidebarCollapsed) {
-                        masterContainer.classList.add('sidebar-collapsed');
-                    }
                 }
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -1124,10 +1905,10 @@
             }
         }
 
-        // Save data (for auto-save of streak count)
+        // Save data
         function saveData() {
             try {
-                localStorage.setItem('steinsGateStreak', JSON.stringify({ streakCount, config, sidebarCollapsed }));
+                localStorage.setItem('steinsGateStreak', JSON.stringify({ streakCount, config }));
             } catch (error) { console.error('Error saving data:', error); }
         }
 
@@ -1176,17 +1957,17 @@
             }
         }
 
-        // Update info panel
+        // Updated info panel for CMD style display
         function updateInfoPanel() {
             try {
                 const divergence = getCurrentDivergence();
                 const currentLine = [...timelines.alpha, ...timelines.beta].find(l => l.value === config.startValue) || { name: "Unknown" };
-                document.getElementById('currentWorldline').textContent = formatDivergence(divergence);
-                document.getElementById('currentRoute').textContent = currentLine.name;
-                document.getElementById('streakDays').textContent = streakCount;
-                document.getElementById('totalDays').textContent = config.totalDays;
-                const progress = config.totalDays > 0 ? Math.min(streakCount / config.totalDays * 100, 100) : 0;
-                document.getElementById('progressFill').style.width = `${progress}%`;
+                
+                // Update CMD status text elements
+                document.getElementById('cmdStatusRoute').textContent = `Route: ${currentLine.name}`;
+                document.getElementById('cmdStatusWorldline').textContent = `Worldline: ${formatDivergence(divergence)} | Target: 1.048596`;
+                document.getElementById('cmdStatusProgress').textContent = `Progress: ${streakCount}/${config.totalDays} Days`;
+                
             } catch (error) { console.error('Error updating info panel:', error); }
         }
 
@@ -1252,10 +2033,9 @@
             step();
         }
 
-        // Show dialogue
+        // Show dialogue with sprites
         function showDialogue() {
             try {
-                // ***PERCENTAGE-BASED TIER LOGIC***
                 const progress = config.totalDays > 0 ? streakCount / config.totalDays : 0;
                 let tier;
                 if (progress >= 0.95) tier = 'final';
@@ -1277,18 +2057,33 @@
                 if (typeof fullDialogue === 'object' && fullDialogue.char && fullDialogue.line) {
                     char = fullDialogue.char;
                     line = fullDialogue.line;
-                } else { // Fallback for custom string format
+                } else {
                     [char, line] = fullDialogue.split(': ');
                 }
 
                 const box = document.getElementById('dialogueBox');
                 if (box && char && line) {
-                    // ***APOSTROPHE FIX***: Removes only leading/trailing quotes, preserves internal ones.
                     const cleanLine = line.trim().replace(/^['"]|['"]$/g, '');
-                    box.innerHTML = `<span class="dialogue-char">${char}:</span> ${cleanLine}`;
+                    
+                    const textContainer = box.querySelector('.dialogue-text-container');
+                    if (textContainer) {
+                        textContainer.innerHTML = `<span class="dialogue-char">${char}: </span>${cleanLine}`;
+                        textContainer.style.lineHeight = config.dialogueLineSpacing;
+                    } else {
+                        box.innerHTML = `<div class="dialogue-text-container" style="line-height: ${config.dialogueLineSpacing};"><span class="dialogue-char">${char}: </span>${cleanLine}</div><img class="character-sprite" id="characterSprite" style="display: none;" alt="Character Sprite">`;
+                    }
+                    
+                    updateCharacterSprite(char, cleanLine);
+                    
                     box.classList.add('visible');
                     const hideDelay = config.autoHideDialogue ? 5000 : 10000;
-                    setTimeout(() => { box.classList.remove('visible'); }, hideDelay);
+                    setTimeout(() => { 
+                        box.classList.remove('visible');
+                        const spriteElement = document.getElementById('characterSprite');
+                        if (spriteElement) {
+                            spriteElement.classList.remove('visible');
+                        }
+                    }, hideDelay);
                 }
             } catch (error) { console.error('Error showing dialogue:', error); }
         }
@@ -1305,10 +2100,13 @@
 
         // Show shortcuts help
         function showShortcutsHelp() {
-            const helpText = `Keyboard Shortcuts:\n• W - Productive Day (+1)\n• S - Toggle Settings Panel\n• D - Toggle Sidebar\n• Ctrl+? - Show this help`;
+            const helpText = `Keyboard Shortcuts:\n• W - Productive Day (+1)\n• S - Toggle Settings Panel\n• Ctrl+? - Show this help`;
             const helpBox = document.getElementById('dialogueBox');
             if (helpBox) {
-                helpBox.innerHTML = `<div class="help-text">${helpText}</div>`;
+                const textContainer = helpBox.querySelector('.dialogue-text-container');
+                if (textContainer) {
+                    textContainer.innerHTML = `<div class="help-text">${helpText}</div>`;
+                }
                 helpBox.classList.add('visible');
                 setTimeout(() => helpBox.classList.remove('visible'), 8000);
             }
@@ -1327,14 +2125,22 @@
         function syncUIWithConfig() {
             try {
                 const inputs = {
-                    'meterSizeInput': config.meterSize, 'soundVolumeInput': config.soundVolume,
-                    'soundLeadInput': config.soundLeadMs, 'flickerSpeedInput': config.flickerSpeed,
+                    'meterSizeInput': config.meterSize, 'meterHorizontalInput': config.meterHorizontal, 'meterVerticalInput': config.meterVertical,
+                    'spriteOffsetInput': config.spriteOffset, 'routeHorizontalInput': config.routeHorizontal, 'routeVerticalInput': config.routeVertical,
+                    'routeSizeInput': config.routeSize, 'worldlineHorizontalInput': config.worldlineHorizontal, 'worldlineVerticalInput': config.worldlineVertical,
+                    'worldlineSizeInput': config.worldlineSize, 'progressSizeInput': config.progressSize,
+                    'progressHorizontalInput': config.progressHorizontal, 'progressVerticalInput': config.progressVertical,
+                    'dialogueLineSpacingInput': config.dialogueLineSpacing,
+                    'soundVolumeInput': config.soundVolume, 'soundLeadInput': config.soundLeadMs, 'flickerSpeedInput': config.flickerSpeed,
                     'flickerDurationInput': config.flickerDuration, 'flickerDesyncInput': config.flickerDesync,
                     'flickerSmoothInput': config.flickerSmoothness, 'totalDaysInput': config.totalDays
                 };
                 const checkboxes = {
                     'soundEnabledInput': config.soundEnabled, 'matchFlickerInput': config.matchFlickerToSound,
-                    'flickerEnabledInput': config.flickerEnabled, 'autoHideDialogue': config.autoHideDialogue
+                    'flickerEnabledInput': config.flickerEnabled, 'autoHideDialogue': config.autoHideDialogue,
+                    'enableSprites': config.enableSprites, 'backgroundGlowInput': config.backgroundGlow,
+                    'initAnimationInput': config.initAnimation, 'scanningLinesInput': config.scanningLines,
+                    'particleEffectsInput': config.particleEffects
                 };
                 const selects = {
                     'timelineSelect': config.startValue, 'dialoguePositionSelect': config.dialoguePosition,
@@ -1377,6 +2183,7 @@
                 }
             });
         }
+
         function resetStreak() {
             if (isFlickering) return;
             const attractorFields = ['alpha', 'beta'];
@@ -1384,15 +2191,17 @@
             const pool = randomField === 'beta' ? timelines.beta : timelines.alpha;
             const randomLine = pool[Math.floor(Math.random() * pool.length)];
             config.startValue = randomLine.value;
+			config.dialogueTimeline = randomField;
             streakCount = 0;
             playSoundThenFlicker();
             syncUIWithConfig();
             showTooltip(`Reset to ${randomField.charAt(0).toUpperCase() + randomField.slice(1)} attractor field: ${randomLine.name}`);
         }
+
         function toggleSettings() {
             try {
-                const panel = document.getElementById('settingsPanel');
-                if (panel) panel.classList.toggle('active');
+                const drawer = document.getElementById('settingsDrawer');
+                if (drawer) drawer.classList.toggle('active');
             } catch (error) { console.error('Error toggling settings:', error); }
         }
 
@@ -1401,7 +2210,7 @@
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'TEXTAREA') return;
             const keyActions = { 
                 'w': incrementStreak, 's': toggleSettings,
-                'd': toggleSidebar, '?': () => e.ctrlKey && showShortcutsHelp()
+                '?': () => e.ctrlKey && showShortcutsHelp()
             };
             const action = keyActions[e.key.toLowerCase()];
             if (action) {
@@ -1419,7 +2228,15 @@
                 loadData();
                 initializeDialogues();
                 syncUIWithConfig();
+                updateDialogueLineSpacing();
+                updateSpriteOffset();
+                updateMeterPosition();
+                updateCmdStatusPositioning();
+                updateBackgroundGlow();
+                updateVisualEffects();
+                checkAndApplyBackground();
                 updateDisplay();
+                runInitialization();
                 setInterval(saveData, 30000);
                 console.log('Initialization complete!');
             } catch (error) {
