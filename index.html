@@ -1733,64 +1733,102 @@
 			return null;
 		}
 
-        function updateCharacterSprite(character, dialogue) {
-            if (!config.enableSprites || !character) return;
-            
-            const spritePath = getCharacterSprite(character, dialogue);
-            const spriteElement = document.getElementById('characterSprite');
-            const dialogueBox = document.getElementById('dialogueBox');
-            
-            if (!spriteElement || !dialogueBox) return;
-            
-            if (spritePath && character.toLowerCase() !== 'narrator') {
-                dialogueBox.classList.add('with-sprites');
-                
-                const charName = character.toLowerCase();
-                const nameMapping = {
-                    'amadeus kurisu': 'amadeus',
-                    'future okabe': 'futureokabe'
-                };
-                const mappedChar = nameMapping[charName] || charName;
-				const timeline = config.dialogueTimeline; // 'alpha' or 'beta'
-				let dimensions = CHARACTER_DIMENSIONS[mappedChar] && CHARACTER_DIMENSIONS[mappedChar][timeline];
+		function updateCharacterSprite(character, dialogue) {
+			if (!config.enableSprites || !character) return;
 
-				if (!dimensions && CHARACTER_DIMENSIONS[mappedChar]) {
-					// fallback to alpha if beta data is missing
-					dimensions = CHARACTER_DIMENSIONS[mappedChar]['alpha'];
-				}
+			const spriteElement = document.getElementById('characterSprite');
+			const dialogueBox = document.getElementById('dialogueBox');
+			if (!spriteElement || !dialogueBox) return;
 
-				if (dimensions) {
-					const scaleWidth = 250 / dimensions.width;
-					const scaleHeight = 300 / dimensions.height;
+			const charLower = character.toLowerCase();
+
+			let spritePath;
+
+			if (charLower === 'narrator') {
+				// Show narrator sprite from consistent path depending on timeline
+				spritePath = `sprites/${config.dialogueTimeline}/narrator_defaultstare.png`;
+
+				dialogueBox.classList.add('with-sprites');
+
+				const narratorDims = CHARACTER_DIMENSIONS['narrator'] && CHARACTER_DIMENSIONS['narrator'][config.dialogueTimeline];
+				if (narratorDims) {
+					const scaleWidth = 250 / narratorDims.width;
+					const scaleHeight = 300 / narratorDims.height;
 					const scale = Math.min(scaleWidth, scaleHeight, 1);
-
-					spriteElement.style.width = `${dimensions.width * scale}px`;
-					spriteElement.style.height = `${dimensions.height * scale}px`;
+					spriteElement.style.width = `${narratorDims.width * scale}px`;
+					spriteElement.style.height = `${narratorDims.height * scale}px`;
+				} else {
+					// fail safe: set default sizes
+					spriteElement.style.width = "250px";
+					spriteElement.style.height = "300px";
 				}
-                
-                spriteElement.src = spritePath;
-                spriteElement.style.display = 'block';
-                spriteElement.style.bottom = `${config.spriteOffset}px`;
-                
+
+				spriteElement.style.opacity = '1';
+				spriteElement.style.display = 'block';
+				spriteElement.src = spritePath;
+				spriteElement.style.bottom = `${config.spriteOffset}px`;
+
+				spriteElement.classList.add('visible');
+
+				// Optional error/fallback handling for narrator sprite
 				spriteElement.onerror = () => {
-					const fallbackPath = `sprites/${config.dialogueTimeline}/${mappedChar}_defaultstare.png`;
-					if (spriteElement.src !== fallbackPath) {
-						spriteElement.src = fallbackPath;
-					} else {
-						spriteElement.style.display = 'none';
-						dialogueBox.classList.remove('with-sprites');
-					}
+					// fallback hide if loading fails
+					spriteElement.style.display = 'none';
+					dialogueBox.classList.remove('with-sprites');
 				};
-                
-                setTimeout(() => {
-                    spriteElement.classList.add('visible');
-                }, 100);
-            } else {
-                spriteElement.classList.remove('visible');
-                spriteElement.style.display = 'none';
-                dialogueBox.classList.remove('with-sprites');
-            }
-        }
+
+			} else {
+				// Normal characters: get sprite path via original logic
+				spritePath = getCharacterSprite(character, dialogue);
+
+				if (spritePath) {
+					dialogueBox.classList.add('with-sprites');
+
+					const nameMapping = {
+						'amadeus kurisu': 'amadeus',
+						'future okabe': 'futureokabe'
+					};
+					const mappedChar = nameMapping[charLower] || charLower;
+					let dimensions = CHARACTER_DIMENSIONS[mappedChar] && CHARACTER_DIMENSIONS[mappedChar][config.dialogueTimeline];
+
+					if (!dimensions && CHARACTER_DIMENSIONS[mappedChar]) {
+						dimensions = CHARACTER_DIMENSIONS[mappedChar]['alpha'];
+					}
+
+					if (dimensions) {
+						const scaleWidth = 250 / dimensions.width;
+						const scaleHeight = 300 / dimensions.height;
+						const scale = Math.min(scaleWidth, scaleHeight, 1);
+						spriteElement.style.width = `${dimensions.width * scale}px`;
+						spriteElement.style.height = `${dimensions.height * scale}px`;
+					}
+
+					spriteElement.src = spritePath;
+					spriteElement.style.display = 'block';
+					spriteElement.style.bottom = `${config.spriteOffset}px`;
+
+					spriteElement.onerror = () => {
+						// fallback to default stare sprite if load fails
+						const fallbackPath = `sprites/${config.dialogueTimeline}/${mappedChar}_defaultstare.png`;
+						if (spriteElement.src !== fallbackPath) {
+							spriteElement.src = fallbackPath;
+						} else {
+							spriteElement.style.display = 'none';
+							dialogueBox.classList.remove('with-sprites');
+						}
+					};
+
+					setTimeout(() => {
+						spriteElement.classList.add('visible');
+					}, 100);
+
+				} else {
+					spriteElement.classList.remove('visible');
+					spriteElement.style.display = 'none';
+					dialogueBox.classList.remove('with-sprites');
+				}
+			}
+		}
 
         // Switch dialogue editor tabs
         function switchDialogueTab(tab) {
@@ -2323,19 +2361,34 @@
             });
         }
 
-        function resetStreak() {
-            if (isFlickering) return;
-            const attractorFields = ['alpha', 'beta'];
-            const randomField = attractorFields[Math.floor(Math.random() * attractorFields.length)];
-            const pool = randomField === 'beta' ? timelines.beta : timelines.alpha;
-            const randomLine = pool[Math.floor(Math.random() * pool.length)];
-            config.startValue = randomLine.value;
+		function resetStreak() {
+			if (isFlickering) return;
+
+			const attractorFields = ['alpha', 'beta'];
+			const randomField = attractorFields[Math.floor(Math.random() * attractorFields.length)];
+			const pool = randomField === 'beta' ? timelines.beta : timelines.alpha;
+			const randomLine = pool[Math.floor(Math.random() * pool.length)];
+			config.startValue = randomLine.value;
 			config.dialogueTimeline = randomField;
-            streakCount = 0;
-            playSoundThenFlicker();
-            syncUIWithConfig();
-            showTooltip(`Reset to ${randomField.charAt(0).toUpperCase() + randomField.slice(1)} attractor field: ${randomLine.name}`);
-        }
+			streakCount = 0;
+			initializeDialogues();
+
+			playSoundThenFlicker();
+
+			// Clear current dialogue and sprite after reset
+			updateCharacterSprite(null, null);
+			const dialogueText = document.getElementById('dialogueText');
+			if (dialogueText) {
+				dialogueText.textContent = '';
+			}
+			const box = document.getElementById('dialogueBox');
+			if (box) {
+				box.classList.remove('visible');
+			}
+
+			syncUIWithConfig();
+			showTooltip(`Reset to ${randomField.charAt(0).toUpperCase() + randomField.slice(1)} attractor field: ${randomLine.name}`);
+		}
 
         function toggleSettings() {
             try {
