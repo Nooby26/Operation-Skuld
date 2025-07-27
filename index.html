@@ -1056,6 +1056,8 @@
             }
         };
         
+		let isInputLocked = false;
+		
         const STEINS_GATE_TARGET = 1.048596;
         let streakSound = null;
 
@@ -2350,16 +2352,22 @@
         }
 
         // User actions
-        function incrementStreak() {
-            if (isFlickering) return;
-            streakCount++;
-            playSoundThenFlicker(() => {
-                showDialogue();
-                if (streakCount >= config.totalDays) {
-                    showTooltip('Congratulations! You\'ve reached the Steins Gate worldline! El Psy Kongroo...', 5000);
-                }
-            });
-        }
+		function incrementStreak() {
+			if (isFlickering || isInputLocked) return;
+			isInputLocked = true;
+			streakCount++;
+			playSoundThenFlicker(() => {
+				showDialogue();
+				if (streakCount >= config.totalDays) {
+					showTooltip('Congratulations! You\'ve reached the Steins Gate worldline! El Psy Kongroo...', 5000);
+				}
+				// Wait until the dialogue box (which auto-hides after a delay) has faded out before re-enabling input
+				const hideDelay = config.autoHideDialogue ? 5000 : 10000;
+				setTimeout(() => {
+					isInputLocked = false;
+				}, hideDelay + 600); // 600ms buffer for fade animation
+			});
+		}
 
 		function resetStreak() {
 			if (isFlickering) return;
